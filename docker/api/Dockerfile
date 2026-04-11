@@ -39,7 +39,6 @@ RUN composer install --no-dev --no-scripts --no-interaction --optimize-autoloade
 
 COPY api/ .
 RUN composer dump-autoload --optimize --classmap-authoritative \
-    && APP_ENV=prod APP_SECRET=build-secret DATABASE_URL=postgresql://localhost/db bin/console cache:warmup --env=prod \
     && rm /usr/bin/composer
 
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
