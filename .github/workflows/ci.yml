@@ -37,7 +37,7 @@ jobs:
 
       - name: Install API dependencies
         working-directory: api
-        run: composer install --no-progress --prefer-dist
+        run: composer install --no-progress --prefer-dist --no-scripts
 
       - name: PHP CS Fixer
         working-directory: api
