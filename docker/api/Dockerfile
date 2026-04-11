@@ -31,6 +31,7 @@ COPY docker/api/php-dev.ini /usr/local/etc/php/conf.d/zz-dev.ini
 # --- Production ---
 FROM base AS prod
 
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 COPY docker/api/php-prod.ini /usr/local/etc/php/conf.d/zz-prod.ini
 
 COPY api/composer.json api/composer.lock ./
@@ -38,7 +39,8 @@ RUN composer install --no-dev --no-scripts --no-interaction --optimize-autoloade
 
 COPY api/ .
 RUN composer dump-autoload --optimize --classmap-authoritative \
-    && bin/console cache:warmup --env=prod
+    && APP_ENV=prod APP_SECRET=build-secret DATABASE_URL=postgresql://localhost/db bin/console cache:warmup --env=prod \
+    && rm /usr/bin/composer
 
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
     CMD php-fpm-healthcheck || exit 1
