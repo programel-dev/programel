@@ -1,0 +1,86 @@
+services:
+  api:
+    image: ${DOCKER_REGISTRY}/api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      APP_ENV: prod
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      MAILER_DSN: ${MAILER_DSN}
+      JWT_PASSPHRASE: ${JWT_PASSPHRASE}
+      SENTRY_DSN: ${SENTRY_DSN}
+      APP_SECRET: ${APP_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    image: ${DOCKER_REGISTRY}/api:${IMAGE_TAG:-latest}
+    command: bin/console messenger:consume async --memory-limit=128M --time-limit=3600
+    restart: unless-stopped
+    environment:
+      APP_ENV: prod
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      MAILER_DSN: ${MAILER_DSN}
+      SENTRY_DSN: ${SENTRY_DSN}
+      APP_SECRET: ${APP_SECRET}
+    depends_on:
+      - api
+
+  frontend:
+    image: ${DOCKER_REGISTRY}/frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      API_INTERNAL_URL: http://api:9000
+      NEXT_PUBLIC_API_URL: /api/v1
+      SENTRY_DSN: ${SENTRY_DSN}
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/sites:/etc/nginx/conf.d:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./static:/var/www/static:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+      - frontend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/nginx-health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pg_data:

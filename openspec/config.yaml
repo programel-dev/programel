@@ -1,0 +1,9 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Symfony 7.2 (API-only), Next.js (SSR, App Router, TypeScript), PostgreSQL 16, Redis 7
+  Infrastructure: Docker (dev/prod/staging), Nginx reverse proxy, GitHub Actions CI/CD, DigitalOcean
+  Domains: programel.com (main), test.programel.com (staging), lebenslauf.programel.com (static), olcha.programel.com (static)
+  Auth: JWT (lexik) with httpOnly cookies, refresh tokens (gesdinet)
+  Architecture: Monolith with multi-tenant potential, static landings for subdomains
+  Convention: Ukrainian/English docs, kebab-case for file names, PSR-12 for PHP

@@ -1,0 +1,23 @@
+framework:
+    messenger:
+        failure_transport: failed
+
+        transports:
+            async:
+                dsn: '%env(REDIS_URL)%/messages'
+                retry_strategy:
+                    max_retries: 3
+                    delay: 1000
+                    multiplier: 4
+                    max_delay: 60000
+            failed:
+                dsn: '%env(REDIS_URL)%/messages_failed'
+
+        routing:
+            'App\Message\*': async
+
+when@test:
+    framework:
+        messenger:
+            transports:
+                async: 'in-memory://'

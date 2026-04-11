@@ -1,0 +1,18 @@
+nelmio_cors:
+    defaults:
+        allow_origin:
+            - 'https://programel.com'
+            - 'https://test.programel.com'
+        allow_methods: ['GET', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE']
+        allow_headers: ['Content-Type', 'Authorization']
+        expose_headers: ['Link', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset']
+        max_age: 3600
+    paths:
+        '^/api/': null
+
+when@dev:
+    nelmio_cors:
+        defaults:
+            allow_origin:
+                - 'https://programel.local'
+                - 'http://localhost:3000'
