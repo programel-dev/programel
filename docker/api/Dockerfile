@@ -39,7 +39,9 @@ RUN composer install --no-dev --no-scripts --no-interaction --optimize-autoloade
 
 COPY api/ .
 RUN composer dump-autoload --optimize --classmap-authoritative \
-    && rm /usr/bin/composer
+    && rm /usr/bin/composer \
+    && mkdir -p var/cache var/log \
+    && chown -R www-data:www-data var
 
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
     CMD php-fpm-healthcheck || exit 1
