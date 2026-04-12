@@ -4,9 +4,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**programel** — a spec-driven development workspace using the OpenSpec workflow system. No application source code,
-language, or framework has been chosen yet. The repository currently contains only OpenSpec configuration and Claude
-Code custom commands/skills.
+**programel** — personal platform (programel.com) built with a spec-driven workflow.
+
+### Tech stack
+
+- **API**: Symfony 7.2 (API-only) — `api/` — entities, controllers, API Platform, Behat, PHPUnit
+- **Frontend**: Next.js (App Router, TypeScript, Sentry) — `frontend/`
+- **Database**: PostgreSQL 16, Redis 7
+- **Infrastructure**: Docker (dev/prod/staging), Nginx reverse proxy — `docker/`
+- **Static sites**: `static/lebenslauf/`, `static/olcha/` — plain HTML landings served by Nginx
+- **CI/CD**: GitHub Actions, DigitalOcean deployment
+- **Auth**: JWT (lexik) with httpOnly cookies, refresh tokens (gesdinet)
+
+### Development commands (Makefile)
+
+| Command         | Purpose                                    |
+|-----------------|--------------------------------------------|
+| `make dev`      | Start dev environment (docker compose)     |
+| `make stop`     | Stop all containers                        |
+| `make test`     | Run all tests (PHPUnit + frontend)         |
+| `make behat`    | Run Behat integration tests                |
+| `make lint`     | Run linters (php-cs-fixer, phpstan, eslint, tsc) |
+| `make lint-fix` | Auto-fix lint issues                       |
+| `make migrate`  | Run database migrations                    |
+| `make staging`  | Start staging environment                  |
+| `make deploy`   | Deploy to production                       |
+
+### Domains
+
+- `programel.com` — main (production)
+- `test.programel.com` — staging
+- `lebenslauf.programel.com` — static resume
+- `olcha.programel.com` — static landing
+- `programel.local` — local development (with mkcert SSL)
 
 ## OpenSpec Workflow
 
@@ -48,6 +78,11 @@ artifact-driven cycle managed by the `openspec` CLI.
 Delta specs use structured sections: `## ADDED Requirements`, `## MODIFIED Requirements`, `## REMOVED Requirements`,
 `## RENAMED Requirements`. Requirements use WHEN/THEN/AND scenario format for testability.
 
+### Conventions
+
+- Ukrainian/English docs, kebab-case for file names, PSR-12 for PHP
+- Frontend: see `frontend/AGENTS.md` — always check Next.js docs in `node_modules/next/dist/docs/` before writing code
+
 ## IDE
 
-IntelliJ IDEA project (general module type, no specific SDK configured).
+IntelliJ IDEA project.
