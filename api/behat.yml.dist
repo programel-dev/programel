@@ -12,4 +12,4 @@ default:
                 class: App\Kernel
                 environment: test
                 debug: true
-        Behatch\Extension: ~
+        Sanpi\Behatch\Extension: ~
