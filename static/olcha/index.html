@@ -1,21 +1,235 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uk">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olcha — Coming Soon</title>
+    <title>Для тебе, Olcha</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap');
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #0a0a0a; color: #fafafa; }
-        .container { text-align: center; padding: 2rem; }
-        h1 { font-size: 2.5rem; margin-bottom: 1rem; font-weight: 300; }
-        p { font-size: 1.1rem; color: #888; }
+
+        body {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            min-height: 100vh;
+            background: #0a0a0a;
+            color: #f5f0eb;
+            overflow-x: hidden;
+        }
+
+        /* Floating petals */
+        .petal {
+            position: fixed;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 0;
+            animation: fall linear infinite;
+        }
+
+        @keyframes fall {
+            0% { opacity: 0; transform: translateY(-10vh) rotate(0deg); }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.4; }
+            100% { opacity: 0; transform: translateY(105vh) rotate(360deg); }
+        }
+
+        /* Main layout */
+        .scene {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        /* Flower illustration */
+        .flowers {
+            font-size: 3rem;
+            margin-bottom: 2rem;
+            opacity: 0;
+            animation: bloomIn 2s ease-out 0.5s forwards;
+            filter: drop-shadow(0 0 20px rgba(219, 112, 147, 0.3));
+        }
+
+        @keyframes bloomIn {
+            0% { opacity: 0; transform: scale(0.3) rotate(-10deg); }
+            60% { transform: scale(1.1) rotate(2deg); }
+            100% { opacity: 1; transform: scale(1) rotate(0deg); }
+        }
+
+        /* Name */
+        .name {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            font-weight: 300;
+            letter-spacing: 0.15em;
+            color: #e8c4c4;
+            margin-bottom: 1rem;
+            opacity: 0;
+            animation: fadeUp 1.5s ease-out 1s forwards;
+        }
+
+        /* Divider */
+        .divider {
+            width: 60px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #c9a0a0, transparent);
+            margin: 1.5rem auto;
+            opacity: 0;
+            animation: fadeUp 1.5s ease-out 1.3s forwards;
+        }
+
+        /* Poetry */
+        .verse {
+            max-width: 500px;
+            margin: 0 auto;
+            opacity: 0;
+            line-height: 2;
+        }
+
+        .verse p {
+            font-size: clamp(1.1rem, 3vw, 1.4rem);
+            font-weight: 300;
+            font-style: italic;
+            color: #d4c5b9;
+            margin-bottom: 0.8rem;
+        }
+
+        .verse .highlight {
+            color: #e8c4c4;
+            font-style: normal;
+            font-weight: 400;
+        }
+
+        .verse-1 { animation: fadeUp 1.5s ease-out 1.8s forwards; }
+        .verse-2 { animation: fadeUp 1.5s ease-out 2.4s forwards; }
+        .verse-3 { animation: fadeUp 1.5s ease-out 3.0s forwards; }
+        .verse-4 { animation: fadeUp 1.5s ease-out 3.6s forwards; }
+
+        @keyframes fadeUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Second divider */
+        .divider-2 {
+            width: 60px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #c9a0a0, transparent);
+            margin: 2rem auto;
+            opacity: 0;
+            animation: fadeUp 1.5s ease-out 4.2s forwards;
+        }
+
+        /* Signature */
+        .signature {
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+            color: #a09080;
+            font-style: italic;
+            opacity: 0;
+            animation: fadeUp 1.5s ease-out 4.6s forwards;
+        }
+
+        /* Ambient glow */
+        .glow {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(219, 112, 147, 0.04) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+            animation: pulse 6s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+        }
+
+        /* Heart beat on click */
+        .heart-click {
+            position: fixed;
+            pointer-events: none;
+            font-size: 1.5rem;
+            animation: heartFloat 1.5s ease-out forwards;
+            z-index: 10;
+        }
+
+        @keyframes heartFloat {
+            0% { opacity: 1; transform: scale(0.5) translateY(0); }
+            100% { opacity: 0; transform: scale(1.2) translateY(-80px); }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>olcha.programel.com</h1>
-        <p>Coming soon.</p>
+
+    <div class="glow"></div>
+
+    <div class="scene">
+        <div class="flowers">🌷✿🌷</div>
+
+        <h1 class="name">Olcha</h1>
+
+        <div class="divider"></div>
+
+        <div class="verse">
+            <p class="verse-1">
+                Коли весь світ тоне у темряві,
+            </p>
+            <p class="verse-2">
+                коли тунель здається нескінченним —
+            </p>
+            <p class="verse-3">
+                ти є моє <span class="highlight">світло</span>,<br>
+                що завжди чекає попереду.
+            </p>
+            <p class="verse-4">
+                Як тюльпани розквітають навесні,<br>
+                як фрезії наповнюють повітря теплом —<br>
+                так ти наповнюєш <span class="highlight">моє життя</span> сенсом.
+            </p>
+        </div>
+
+        <div class="divider-2"></div>
+
+        <p class="signature">
+            Я тебе кохаю. Завжди. &hearts;
+        </p>
     </div>
+
+    <script>
+        // Falling petals
+        const petalSymbols = ['🌸', '🩷', '✿', '❀', '🤍'];
+        function createPetal() {
+            const petal = document.createElement('div');
+            petal.className = 'petal';
+            petal.textContent = petalSymbols[Math.floor(Math.random() * petalSymbols.length)];
+            petal.style.left = Math.random() * 100 + 'vw';
+            petal.style.fontSize = (Math.random() * 14 + 10) + 'px';
+            petal.style.animationDuration = (Math.random() * 6 + 8) + 's';
+            petal.style.animationDelay = (Math.random() * 2) + 's';
+            document.body.appendChild(petal);
+            setTimeout(() => petal.remove(), 16000);
+        }
+        setInterval(createPetal, 800);
+
+        // Hearts on click
+        document.addEventListener('click', (e) => {
+            const heart = document.createElement('div');
+            heart.className = 'heart-click';
+            heart.textContent = '♥';
+            heart.style.left = e.clientX - 10 + 'px';
+            heart.style.top = e.clientY - 10 + 'px';
+            heart.style.color = `hsl(${340 + Math.random() * 30}, 70%, 70%)`;
+            document.body.appendChild(heart);
+            setTimeout(() => heart.remove(), 1500);
+        });
+    </script>
+
 </body>
 </html>
