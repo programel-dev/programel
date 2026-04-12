@@ -80,7 +80,6 @@
     },
     "require-dev": {
         "behat/behat": "^3.30",
-        "behatch/contexts": "^1.3",
         "doctrine/doctrine-fixtures-bundle": "^4.3",
         "friends-of-behat/symfony-extension": "^2.6",
         "friendsofphp/php-cs-fixer": "^3.95",

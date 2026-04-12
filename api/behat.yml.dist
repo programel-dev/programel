@@ -3,8 +3,6 @@ default:
         default:
             contexts:
                 - App\Tests\Behat\FeatureContext
-                - Behatch\Context\RestContext
-                - Behatch\Context\JsonContext
     extensions:
         FriendsOfBehat\SymfonyExtension:
             bootstrap: tests/bootstrap.php
@@ -12,4 +10,3 @@ default:
                 class: App\Kernel
                 environment: test
                 debug: true
-        Sanpi\Behatch\Extension: ~
