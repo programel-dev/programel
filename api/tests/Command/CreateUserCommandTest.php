@@ -43,8 +43,8 @@ class CreateUserCommandTest extends TestCase
 
         $this->entityManager->expects($this->once())->method('persist')->with(
             $this->callback(function (User $user): bool {
-                return $user->getEmail() === 'test@example.com'
-                    && $user->getPassword() === 'hashed_password'
+                return 'test@example.com' === $user->getEmail()
+                    && 'hashed_password' === $user->getPassword()
                     && $user->getRoles() === ['ROLE_USER'];
             }),
         );
