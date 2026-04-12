@@ -23,13 +23,20 @@ class HealthController extends AbstractController
             'redis' => $this->checkRedis(),
         ];
 
-        $allConnected = !in_array('error', $services, true);
+        $errorCount = count(array_filter($services, fn(string $s) => $s === 'error'));
+        $status = match (true) {
+            $errorCount === 0 => 'ok',
+            $errorCount === count($services) => 'error',
+            default => 'degraded',
+        };
+
+        $httpStatus = $status === 'ok' ? Response::HTTP_OK : Response::HTTP_SERVICE_UNAVAILABLE;
 
         return new JsonResponse([
-            'status' => $allConnected ? 'ok' : 'error',
+            'status' => $status,
             'timestamp' => (new \DateTimeImmutable())->format(\DateTimeInterface::ATOM),
             'services' => $services,
-        ], $allConnected ? Response::HTTP_OK : Response::HTTP_SERVICE_UNAVAILABLE);
+        ], $httpStatus);
     }
 
     private function checkDatabase(): string
@@ -46,7 +53,8 @@ class HealthController extends AbstractController
     {
         try {
             $redis = new \Redis();
-            $redis->connect($_ENV['REDIS_URL'] ?? 'redis://redis:6379');
+            $url = parse_url($_ENV['REDIS_URL'] ?? 'redis://redis:6379');
+            $redis->connect($url['host'] ?? 'redis', (int) ($url['port'] ?? 6379));
             $redis->ping();
             return 'connected';
         } catch (\Throwable) {

@@ -24,6 +24,7 @@ frontend/.next/
 # Symfony
 api/var/
 api/public/bundles/
+api/config/jwt/*.pem
 
-#OpenSpec
+# OpenSpec
 openspec/changes
