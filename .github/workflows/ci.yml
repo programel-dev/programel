@@ -117,7 +117,7 @@ jobs:
         working-directory: api
         env:
           APP_ENV: test
-        run: bin/phpunit
+        run: vendor/bin/simple-phpunit
         continue-on-error: true
 
       - name: Run Behat
