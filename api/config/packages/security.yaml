@@ -21,6 +21,11 @@ security:
             pattern: ^/api/docs
             security: false
 
+        telegram_webhook:
+            pattern: ^/api/v1/telegram/webhook/
+            stateless: true
+            security: false
+
         login:
             pattern: ^/api/v1/auth/login$
             stateless: true
@@ -43,6 +48,7 @@ security:
         - { path: ^/api/docs, roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/auth/login$, roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/auth/refresh$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/v1/telegram/webhook/, roles: PUBLIC_ACCESS }
         - { path: ^/api/, roles: IS_AUTHENTICATED_FULLY }
 
 when@test:

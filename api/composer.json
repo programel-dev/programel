@@ -16,9 +16,12 @@
         "nelmio/cors-bundle": "^2.6",
         "sentry/sentry-symfony": "^5.10",
         "symfony/console": "7.2.*",
+        "symfony/css-selector": "7.2.*",
+        "symfony/dom-crawler": "7.2.*",
         "symfony/dotenv": "7.2.*",
         "symfony/flex": "^2",
         "symfony/framework-bundle": "7.2.*",
+        "symfony/http-client": "7.2.*",
         "symfony/lock": "7.2.*",
         "symfony/mailer": "7.2.*",
         "symfony/messenger": "7.2.*",
@@ -26,6 +29,7 @@
         "symfony/rate-limiter": "7.2.*",
         "symfony/redis-messenger": "7.2.*",
         "symfony/runtime": "7.2.*",
+        "symfony/scheduler": "7.2.*",
         "symfony/yaml": "7.2.*"
     },
     "config": {

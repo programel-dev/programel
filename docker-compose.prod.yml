@@ -8,12 +8,19 @@ services:
       APP_ENV: prod
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
+      LOCK_DSN: ${REDIS_URL}
       MAILER_DSN: ${MAILER_DSN}
       JWT_PASSPHRASE: ${JWT_PASSPHRASE}
       JWT_SECRET_KEY: /app/config/jwt/private.pem
       JWT_PUBLIC_KEY: /app/config/jwt/public.pem
       SENTRY_DSN: ${SENTRY_DSN}
       APP_SECRET: ${APP_SECRET}
+      EQUEUE_TARGET_URL: ${EQUEUE_TARGET_URL}
+      EQUEUE_POLL_INTERVAL: ${EQUEUE_POLL_INTERVAL:-300}
+      EQUEUE_USER_AGENT: ${EQUEUE_USER_AGENT}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET}
     depends_on:
       postgres:
         condition: service_healthy
@@ -22,15 +29,21 @@ services:
 
   worker:
     image: ${DOCKER_REGISTRY}/api:${IMAGE_TAG:-latest}
-    command: bin/console messenger:consume async --memory-limit=128M --time-limit=3600
+    command: bin/console messenger:consume async scheduler_default --memory-limit=128M --time-limit=3600
     restart: unless-stopped
     environment:
       APP_ENV: prod
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
+      LOCK_DSN: ${REDIS_URL}
       MAILER_DSN: ${MAILER_DSN}
       SENTRY_DSN: ${SENTRY_DSN}
       APP_SECRET: ${APP_SECRET}
+      EQUEUE_TARGET_URL: ${EQUEUE_TARGET_URL}
+      EQUEUE_POLL_INTERVAL: ${EQUEUE_POLL_INTERVAL:-300}
+      EQUEUE_USER_AGENT: ${EQUEUE_USER_AGENT}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME}
     depends_on:
       - api
 
