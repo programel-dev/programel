@@ -1,0 +1,9 @@
+parameters:
+    level: 5
+    paths:
+        - src
+    ignoreErrors:
+        # Doctrine entity identifier pattern — int is populated by the ORM via reflection
+        -
+            identifier: property.unusedType
+            message: '#Property App\\Entity\\.*::\$id \(int\|null\) is never assigned int#'

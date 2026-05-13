@@ -33,10 +33,7 @@ final class SendTelegramHandler
         } catch (TelegramApiException $exception) {
             if (403 === $exception->httpStatus) {
                 $this->unbindBlockedChat($message->chatId);
-                throw new UnrecoverableMessageHandlingException(
-                    sprintf('Telegram chat %s is blocked; unbound account', $message->chatId),
-                    previous: $exception,
-                );
+                throw new UnrecoverableMessageHandlingException(sprintf('Telegram chat %s is blocked; unbound account', $message->chatId), previous: $exception);
             }
 
             if ($exception->retryable) {

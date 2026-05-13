@@ -43,7 +43,8 @@ final class TelegramClient
     }
 
     /**
-     * @param  array<string, mixed> $payload
+     * @param array<string, mixed> $payload
+     *
      * @return array<string, mixed>
      *
      * @throws TelegramApiException
@@ -57,11 +58,7 @@ final class TelegramClient
             $status = $response->getStatusCode();
             $body = $response->toArray(false);
         } catch (TransportExceptionInterface $exception) {
-            throw new TelegramApiException(
-                sprintf('Telegram transport failure for %s: %s', $method, $exception->getMessage()),
-                0,
-                true,
-            );
+            throw new TelegramApiException(sprintf('Telegram transport failure for %s: %s', $method, $exception->getMessage()), 0, true);
         }
 
         if ($status >= 200 && $status < 300 && true === ($body['ok'] ?? false)) {
@@ -71,10 +68,6 @@ final class TelegramClient
         $description = is_string($body['description'] ?? null) ? $body['description'] : 'Unknown error';
         $retryable = 429 === $status || $status >= 500;
 
-        throw new TelegramApiException(
-            sprintf('Telegram %s failed (%d): %s', $method, $status, $description),
-            $status,
-            $retryable,
-        );
+        throw new TelegramApiException(sprintf('Telegram %s failed (%d): %s', $method, $status, $description), $status, $retryable);
     }
 }

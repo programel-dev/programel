@@ -27,10 +27,6 @@ final class EqueueWatchOwnerProcessor implements ProcessorInterface
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): mixed
     {
-        if (!$data instanceof EqueueWatch) {
-            return $this->persistProcessor->process($data, $operation, $uriVariables, $context);
-        }
-
         $user = $this->security->getUser();
         if (!$user instanceof User) {
             throw new AccessDeniedHttpException();

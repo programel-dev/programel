@@ -80,7 +80,7 @@ final class EvaluateWatchHandler
                 $this->entityManager->persist($notification);
                 $this->entityManager->flush();
             } catch (UniqueConstraintViolationException) {
-                $this->entityManager->clear(EqueueNotification::class);
+                $this->entityManager->detach($notification);
 
                 continue;
             }

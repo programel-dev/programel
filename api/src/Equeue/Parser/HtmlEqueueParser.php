@@ -62,7 +62,7 @@ final class HtmlEqueueParser implements EqueueParserInterface
             });
         });
 
-        return new EqueueSnapshotData(array_values($services), array_values($slots), self::VERSION);
+        return new EqueueSnapshotData($services, $slots, self::VERSION);
     }
 
     public function version(): string

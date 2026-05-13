@@ -74,7 +74,7 @@ class EqueueWatch
     #[ORM\Column(type: Types::DATE_IMMUTABLE)]
     #[Assert\NotNull]
     #[Assert\Expression(
-        "this.getDateFrom() === null or this.getDateTo() === null or this.getDateFrom() <= this.getDateTo()",
+        'this.getDateFrom() === null or this.getDateTo() === null or this.getDateFrom() <= this.getDateTo()',
         message: 'dateFrom must be on or before dateTo'
     )]
     #[Groups(['equeue_watch:read', 'equeue_watch:write'])]
