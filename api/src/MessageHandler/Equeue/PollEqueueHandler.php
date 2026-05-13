@@ -9,6 +9,7 @@ use App\Equeue\Fetcher\EqueueFetcherInterface;
 use App\Equeue\Parser\EqueueParseException;
 use App\Equeue\Parser\EqueueParserInterface;
 use App\Message\Equeue\EvaluateWatchMessage;
+use App\Message\Equeue\PollEqueueMessage;
 use App\Repository\Equeue\EqueueWatchRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -30,7 +31,7 @@ final class PollEqueueHandler
     ) {
     }
 
-    public function __invoke(): void
+    public function __invoke(PollEqueueMessage $message): void
     {
         $lock = $this->lockFactory->createLock('equeue.poll', ttl: 120.0, autoRelease: true);
         if (!$lock->acquire()) {
