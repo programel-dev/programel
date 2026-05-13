@@ -1,0 +1,13 @@
+# Symfony Scheduler component config.
+#
+# Schedules themselves are declared in PHP via the #[AsSchedule] attribute
+# (see App\Equeue\Schedule\EqueueSchedule). The component auto-registers a
+# `scheduler_<name>` Messenger transport per schedule.
+#
+# The worker container must consume BOTH the async transport and the
+# scheduler trigger transport. See docker-compose.*.yml worker command:
+#   bin/console messenger:consume async scheduler_default --memory-limit=128M
+framework:
+    messenger:
+        routing:
+            'App\Message\Equeue\PollEqueueMessage': async
