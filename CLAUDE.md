@@ -75,6 +75,8 @@ git checkout -b <type>/<description>
 
 Commit all work there, then open a PR to merge into `main`.
 
+**Never commit or push without explicit instruction.** Do not run `git commit` or `git push` unless the user explicitly asks to.
+
 ## Development commands (Makefile)
 
 | Command         | Purpose                                    |
