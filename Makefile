@@ -74,6 +74,7 @@ deploy: ## Deploy to production server
 	rsync -az docker-compose.prod.yml docker/nginx $(SERVER_USER)@$(SERVER_HOST):/opt/programel/
 	ssh $(SERVER_USER)@$(SERVER_HOST) '\
 		cd /opt/programel && \
+		chmod 644 api/config/jwt/private.pem 2>/dev/null || true && \
 		docker compose -f docker-compose.prod.yml pull && \
 		docker compose -f docker-compose.prod.yml exec api bin/console doctrine:migrations:migrate --no-interaction && \
 		docker compose -f docker-compose.prod.yml up -d && \

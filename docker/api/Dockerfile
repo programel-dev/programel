@@ -42,6 +42,7 @@ RUN composer dump-autoload --optimize --classmap-authoritative \
     && rm /usr/bin/composer \
     && echo "APP_ENV=prod" > .env \
     && mkdir -p var/cache var/log \
+    && APP_ENV=prod php bin/console cache:warmup \
     && chown -R www-data:www-data var .env
 
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
