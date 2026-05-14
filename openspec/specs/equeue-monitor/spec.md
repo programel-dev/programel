@@ -1,17 +1,16 @@
 # equeue-monitor
 
 Multi-tenant monitoring service that polls the Munich consulate e-queue page
-(`https://munich.pasport.org.ua/solutions/e-queue`), evaluates user
-subscriptions against the resulting slot snapshots, and delivers Telegram
-notifications when matching slots become available.
+(`https://munich.pasport.org.ua/solutions/e-queue`), detects page-state changes
+via alert-absence detection, and delivers Telegram notifications to all connected
+users when slots may be available.
 
 ## Requirements
 
 ### Requirement: Periodic e-queue polling
 
 The system SHALL periodically fetch the public e-queue page at
-`EQUEUE_TARGET_URL` and persist a normalized snapshot of services and
-available slots.
+`EQUEUE_TARGET_URL` and persist a snapshot of the poll result.
 
 #### Scenario: Scheduled poll every interval
 - **WHEN** the scheduler interval (`EQUEUE_POLL_INTERVAL`, default 300s)
@@ -20,22 +19,16 @@ available slots.
   transport and consumed by the worker
 
 #### Scenario: Successful poll persists snapshot
-- **WHEN** the e-queue page returns HTTP 2xx and the parser succeeds
+- **WHEN** the e-queue page returns HTTP 2xx
 - **THEN** an `EqueueSnapshot` row is created with `httpStatus`,
-  normalized `payload` (jsonb), `slotCount`, `parserVersion`,
-  and `fetchedAt`
+  `payload` containing `{'alertPresent': bool}`, `slotCount = 0`,
+  `parserVersion = 'alert-detection-v1'`, and `fetchedAt`
 
-#### Scenario: Failed fetch is recorded, not crashed
+#### Scenario: Failed fetch is recorded and broadcast
 - **WHEN** the e-queue page returns 4xx/5xx or network error
-- **THEN** a snapshot is still persisted with the non-success
-  `httpStatus`, status `http_error`, and empty slot list; evaluation is
-  skipped; the handler completes without throwing
-
-#### Scenario: Parse error is recorded
-- **WHEN** the parser raises an exception on a valid HTTP response
-- **THEN** a snapshot is persisted with status `parse_error`,
-  `parserVersion`, and the error message in payload; evaluation is
-  skipped
+- **THEN** a snapshot is persisted with the non-success `httpStatus`
+  and `status = http_error`; a `BroadcastTelegramMessage` is dispatched;
+  the handler completes without throwing
 
 #### Scenario: Concurrent polls are serialized
 - **WHEN** a poll handler is already running (Symfony Lock
@@ -113,6 +106,10 @@ The system SHALL allow authenticated users to create, read, update, and
 delete watch subscriptions specifying which service and date range to
 monitor.
 
+> **Note:** Watches are stored and exposed via API but are not currently
+> evaluated against snapshots — slot-level matching is dormant pending
+> discovery of the real HTML structure when slots are available.
+
 #### Scenario: Authenticated user creates a watch
 - **WHEN** an authenticated user POSTs to `/api/v1/equeue_watches` with
   `serviceCode`, `dateFrom`, `dateTo`, `active`
@@ -134,16 +131,15 @@ monitor.
 - **WHEN** an unauthenticated request hits `/api/v1/equeue_watches`
 - **THEN** the API returns HTTP 401
 
-### Requirement: Slot matching against watches
+### Requirement: Slot matching against watches _(dormant)_
+
+> **Status:** Dormant. `EvaluateWatchMessage` is never dispatched in the
+> current implementation. This requirement will be re-enabled once the real
+> HTML structure of the slots page is known and a working parser is built.
 
 The system SHALL evaluate each newly persisted snapshot against all
 active user watches and identify slots matching the watch's service and
 date range.
-
-#### Scenario: New matching slot triggers evaluation
-- **WHEN** `PollEqueueHandler` finishes persisting an OK snapshot with
-  ≥1 slot and there is ≥1 active watch in DB
-- **THEN** an `EvaluateWatchMessage` is dispatched per active watch
 
 #### Scenario: Slot matches service and date range
 - **WHEN** a snapshot contains a slot whose `serviceCode` equals the
@@ -151,7 +147,9 @@ date range.
   `[watch.dateFrom, watch.dateTo]`
 - **THEN** the evaluator considers the slot a candidate for notification
 
-### Requirement: Notification deduplication
+### Requirement: Notification deduplication _(dormant)_
+
+> **Status:** Dormant — depends on slot matching above.
 
 The system SHALL send at most one Telegram notification per
 (watch, slot) pair, even across multiple polls or concurrent workers.
@@ -181,11 +179,11 @@ The system SHALL send at most one Telegram notification per
 The system SHALL deliver notifications to users via the Telegram Bot
 API using the bot configured by `TELEGRAM_BOT_TOKEN`.
 
-#### Scenario: Delivery on the async transport
-- **WHEN** an `EvaluateWatchMessage` produces a `SendTelegramMessage`
-- **THEN** the message is dispatched onto the `async` transport and
-  consumed by the worker, which calls `sendMessage` against
-  `api.telegram.org/bot<token>/`
+#### Scenario: Broadcast delivery on the async transport
+- **WHEN** `PollEqueueHandler` dispatches a `BroadcastTelegramMessage`
+- **THEN** `BroadcastTelegramHandler` fans it out as one `SendTelegramMessage`
+  per connected account onto the `async` transport; the worker calls
+  `sendMessage` against `api.telegram.org/bot<token>/`
 
 #### Scenario: Telegram 429 retried with backoff
 - **WHEN** Telegram returns HTTP 429 or 5xx
@@ -200,10 +198,9 @@ API using the bot configured by `TELEGRAM_BOT_TOKEN`.
   (no retries)
 
 #### Scenario: User without bound Telegram is skipped
-- **WHEN** a watch belongs to a user whose `TelegramAccount` is missing
-  or has NULL `chatId`
-- **THEN** no `SendTelegramMessage` is dispatched (the evaluator
-  silently skips)
+- **WHEN** `BroadcastTelegramHandler` fans out a message
+- **THEN** only accounts where `chatId IS NOT NULL` receive a message;
+  users who have not connected their Telegram account are silently skipped
 
 ### Requirement: Telegram account linking
 
