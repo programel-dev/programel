@@ -17,7 +17,7 @@ services:
       XDEBUG_MODE: ${XDEBUG_MODE:-off}
       EQUEUE_TARGET_URL: ${EQUEUE_TARGET_URL:-https://munich.pasport.org.ua/solutions/e-queue}
       EQUEUE_POLL_INTERVAL: ${EQUEUE_POLL_INTERVAL:-300}
-      EQUEUE_USER_AGENT: ${EQUEUE_USER_AGENT:-Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36}
+      FLARESOLVERR_URL: ${FLARESOLVERR_URL:-http://flaresolverr:8191/v1}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
@@ -44,12 +44,15 @@ services:
       SENTRY_DSN: ""
       EQUEUE_TARGET_URL: ${EQUEUE_TARGET_URL:-https://munich.pasport.org.ua/solutions/e-queue}
       EQUEUE_POLL_INTERVAL: ${EQUEUE_POLL_INTERVAL:-300}
-      EQUEUE_USER_AGENT: ${EQUEUE_USER_AGENT:-Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36}
+      FLARESOLVERR_URL: ${FLARESOLVERR_URL:-http://flaresolverr:8191/v1}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
     depends_on:
-      - api
+      api:
+        condition: service_started
+      flaresolverr:
+        condition: service_healthy
 
   frontend:
     build:
@@ -109,6 +112,19 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: info
+      TZ: Europe/Kyiv
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8191/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   mailpit:
     image: axllent/mailpit
