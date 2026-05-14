@@ -13,7 +13,7 @@ services:
       APP_SECRET: ${APP_SECRET}
       EQUEUE_TARGET_URL: ${EQUEUE_TARGET_URL:-https://munich.pasport.org.ua/solutions/e-queue}
       EQUEUE_POLL_INTERVAL: ${EQUEUE_POLL_INTERVAL:-300}
-      EQUEUE_USER_AGENT: ${EQUEUE_USER_AGENT}
+      FLARESOLVERR_URL: ${FLARESOLVERR_URL:-http://flaresolverr-staging:8191/v1}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
@@ -37,11 +37,14 @@ services:
       APP_SECRET: ${APP_SECRET}
       EQUEUE_TARGET_URL: ${EQUEUE_TARGET_URL:-https://munich.pasport.org.ua/solutions/e-queue}
       EQUEUE_POLL_INTERVAL: ${EQUEUE_POLL_INTERVAL:-300}
-      EQUEUE_USER_AGENT: ${EQUEUE_USER_AGENT}
+      FLARESOLVERR_URL: ${FLARESOLVERR_URL:-http://flaresolverr-staging:8191/v1}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
     depends_on:
-      - api-staging
+      api-staging:
+        condition: service_started
+      flaresolverr-staging:
+        condition: service_healthy
 
   frontend-staging:
     image: ${DOCKER_REGISTRY}/frontend:${IMAGE_TAG:-latest}
@@ -78,6 +81,19 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+
+  flaresolverr-staging:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: info
+      TZ: Europe/Kyiv
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8191/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
   pg_data_staging:

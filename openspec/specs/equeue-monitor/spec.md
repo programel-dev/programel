@@ -36,12 +36,32 @@ The system SHALL periodically fetch the public e-queue page at
 - **THEN** the duplicate handler invocation returns early without
   fetching
 
+### Requirement: Cloudflare bypass via FlareSolverr
+
+The system SHALL route all e-queue HTTP fetches through a local FlareSolverr service
+that uses headless Chrome to solve Cloudflare Managed Challenges, returning the real
+page HTML that is otherwise blocked by the CF interstitial.
+
+#### Scenario: FlareSolverr service available in all environments
+
+- **WHEN** the Docker Compose stack is started in any environment (`dev`, `staging`, `prod`)
+- **THEN** a `flaresolverr` service is running (image `ghcr.io/flaresolverr/flaresolverr:latest`,
+  port 8191, `LOG_LEVEL=info`, `TZ=Europe/Kyiv`, `restart: unless-stopped`),
+  exposing `GET /health` that returns `{status:"ok"}` when ready;
+  the `worker` service declares `depends_on: flaresolverr: condition: service_healthy`
+
+#### Scenario: FLARESOLVERR_URL configures the bypass endpoint
+
+- **WHEN** the `api` or `worker` service starts
+- **THEN** the env var `FLARESOLVERR_URL` (default `http://flaresolverr:8191/v1`) is
+  available and used by `FlareSolverrEqueueFetcher` as the POST endpoint
+
 ### Requirement: Raw HTML capture and alert-based change detection
 
 The system SHALL save the full HTML response on every successful poll into a
 rolling 8-hour buffer, detect page-state changes via a sentinel string, and
-immediately broadcast a Telegram notification to all connected users when the
-"all slots taken" alert disappears or an HTTP error occurs.
+broadcast a Telegram notification to all connected users **only when state transitions**
+(alert disappears, alert reappears, or HTTP error status changes).
 
 > **Context:** The target page (`https://munich.pasport.org.ua/solutions/e-queue`)
 > renders available slots via client-side JavaScript, making them invisible to a
@@ -50,43 +70,57 @@ immediately broadcast a Telegram notification to all connected users when the
 
 #### Scenario: Target page and HTTP configuration
 - **WHEN** the fetcher runs
-- **THEN** it performs a `GET` against `EQUEUE_TARGET_URL`
-  (default `https://munich.pasport.org.ua/solutions/e-queue`) using the
-  Symfony scoped HTTP client `equeue.client` with `timeout: 10s`,
-  `max_duration: 15s`, header `User-Agent` from `EQUEUE_USER_AGENT`,
-  `Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8`,
-  and `Accept-Language: uk-UA,uk;q=0.9,en;q=0.8`; no cookies, no auth,
-  no query parameters
+- **THEN** it performs a `POST` to `FLARESOLVERR_URL` (default `http://flaresolverr:8191/v1`)
+  with JSON body `{"cmd":"request.get","url":EQUEUE_TARGET_URL,"maxTimeout":30000}`;
+  a successful fetch is indicated by `response.status == "ok"` AND
+  `response.solution.status` in the 2xx range;
+  the full page HTML is taken from `response.solution.response`;
+  the fetcher timeout SHALL be 35 seconds
 
 #### Scenario: Raw HTML is saved on every successful poll
-- **WHEN** the e-queue page returns HTTP 2xx
+- **WHEN** FlareSolverr returns `status: "ok"` and `solution.status` is 2xx
 - **THEN** the full response body is persisted as an `EqueueRawHtml` row
   with `fetchedAt`, `alertPresent` (bool), and `htmlBody` (full text);
   before inserting, all rows with `fetchedAt < NOW() - 8 hours` are deleted,
   keeping the table as a rolling 8-hour buffer (≈96 rows at 5-minute intervals)
 
 #### Scenario: Alert detection
-- **WHEN** the fetcher returns an HTTP 2xx response
+- **WHEN** the fetcher returns a successful 2xx response
 - **THEN** `alertPresent` is set to `true` if the body contains the literal
   string `Наразі всі місця зайняті`, and `false` otherwise;
   detection is a plain `str_contains` check — no DOM parsing
 
-#### Scenario: Alert absent triggers broadcast
-- **WHEN** `alertPresent` is `false`
-- **THEN** a `BroadcastTelegramMessage` is dispatched every poll until the
-  alert reappears (no dedup); the message text is
+#### Scenario: Alert absent triggers broadcast on state transition
+- **WHEN** `alertPresent` is `false` AND the previous `EqueueSnapshot` had
+  `alertPresent` equal to `true`, or previous had `status = http_error`,
+  or no previous snapshot exists
+- **THEN** a `BroadcastTelegramMessage` is dispatched with text
   `"⚡️ Вейкап Нео, стан змінився!\nhttps://munich.pasport.org.ua/solutions/e-queue"`
 
-#### Scenario: HTTP error triggers broadcast
-- **WHEN** the e-queue page returns 4xx/5xx or a network error
-- **THEN** an `EqueueSnapshot` is persisted with `status = http_error`;
-  no `EqueueRawHtml` is saved; a `BroadcastTelegramMessage` is dispatched
-  with text `"🚨 Щось бляха, пішло не в ту дірку"` on every failing poll
+#### Scenario: Alert absent — same state, no broadcast
+- **WHEN** `alertPresent` is `false` AND the previous `EqueueSnapshot` also had
+  `alertPresent` equal to `false`
+- **THEN** no `BroadcastTelegramMessage` is dispatched; only `EqueueRawHtml`
+  and `EqueueSnapshot` are persisted
 
 #### Scenario: Alert present — silence
 - **WHEN** `alertPresent` is `true`
 - **THEN** no `BroadcastTelegramMessage` is dispatched; only `EqueueRawHtml`
   and `EqueueSnapshot` are persisted
+
+#### Scenario: HTTP error triggers broadcast on state transition
+- **WHEN** FlareSolverr returns `status != "ok"` or `solution.status` is non-2xx,
+  AND the previous `EqueueSnapshot` had `status != "http_error"`
+  (or no previous snapshot exists)
+- **THEN** an `EqueueSnapshot` is persisted with `status = http_error`;
+  no `EqueueRawHtml` is saved; a `BroadcastTelegramMessage` is dispatched
+  with text `"🚨 Щось бляха, пішло не в ту дірку"`
+
+#### Scenario: HTTP error — consecutive, no broadcast
+- **WHEN** FlareSolverr returns an error AND the previous `EqueueSnapshot`
+  already had `status = "http_error"`
+- **THEN** an `EqueueSnapshot` is persisted with `status = http_error`;
+  no `BroadcastTelegramMessage` is dispatched
 
 #### Scenario: Broadcast fan-out
 - **WHEN** a `BroadcastTelegramMessage` is dispatched
@@ -97,8 +131,7 @@ immediately broadcast a Telegram notification to all connected users when the
 
 #### Scenario: Snapshot records detection version
 - **WHEN** any `EqueueSnapshot` is persisted by `PollEqueueHandler`
-- **THEN** `parserVersion` is set to `'alert-detection-v1'` to distinguish
-  these rows from any future parser-based snapshots
+- **THEN** `parserVersion` is set to `'cloudflare-bypass-v1'`
 
 ### Requirement: User watch subscriptions
 

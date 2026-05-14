@@ -10,6 +10,7 @@ use App\Equeue\Fetcher\EqueueFetcherInterface;
 use App\Message\Equeue\BroadcastTelegramMessage;
 use App\Message\Equeue\PollEqueueMessage;
 use App\Repository\Equeue\EqueueRawHtmlRepository;
+use App\Repository\Equeue\EqueueSnapshotRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Lock\LockFactory;
@@ -25,6 +26,7 @@ final class PollEqueueHandler
         private readonly EntityManagerInterface $entityManager,
         private readonly MessageBusInterface $messageBus,
         private readonly LockFactory $lockFactory,
+        private readonly EqueueSnapshotRepository $snapshotRepository,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -39,6 +41,7 @@ final class PollEqueueHandler
         }
 
         try {
+            $previous = $this->snapshotRepository->findLatest();
             $response = $this->fetcher->fetch();
 
             if (!$response->isSuccess()) {
@@ -51,10 +54,13 @@ final class PollEqueueHandler
                     $response->statusCode,
                     [],
                     0,
-                    'alert-detection-v1',
+                    'cloudflare-bypass-v1',
                 ));
                 $this->entityManager->flush();
-                $this->messageBus->dispatch(new BroadcastTelegramMessage('🚨 Щось бляха, пішло не в ту дірку'));
+
+                if (null === $previous || EqueueSnapshot::STATUS_HTTP_ERROR !== $previous->getStatus()) {
+                    $this->messageBus->dispatch(new BroadcastTelegramMessage('🚨 Щось бляха, пішло не в ту дірку'));
+                }
 
                 return;
             }
@@ -69,15 +75,18 @@ final class PollEqueueHandler
                 $response->statusCode,
                 ['alertPresent' => $alertPresent],
                 0,
-                'alert-detection-v1',
+                'cloudflare-bypass-v1',
             ));
             $this->entityManager->flush();
 
             if (!$alertPresent) {
-                $this->logger->info('e-queue alert absent — broadcasting notification');
-                $this->messageBus->dispatch(new BroadcastTelegramMessage(
-                    "⚡️ Вейкап Нео, стан змінився!\nhttps://munich.pasport.org.ua/solutions/e-queue"
-                ));
+                $previousAlertPresent = $previous?->getPayload()['alertPresent'] ?? null;
+                if (false !== $previousAlertPresent) {
+                    $this->logger->info('e-queue alert absent — state transition, broadcasting');
+                    $this->messageBus->dispatch(new BroadcastTelegramMessage(
+                        "⚡️ Вейкап Нео, стан змінився!\nhttps://munich.pasport.org.ua/solutions/e-queue"
+                    ));
+                }
             }
         } finally {
             $lock->release();
