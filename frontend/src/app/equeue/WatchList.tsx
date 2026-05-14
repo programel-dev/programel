@@ -31,13 +31,22 @@ export function WatchList() {
   }, [refresh]);
 
   async function toggle(watch: EqueueWatch) {
-    await updateWatch(watch.id, { active: !watch.active });
-    await refresh();
+    try {
+      await updateWatch(watch.id, { active: !watch.active });
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не вдалося змінити статус");
+    }
   }
 
   async function remove(id: number) {
-    await deleteWatch(id);
-    await refresh();
+    if (!confirm("Видалити це відстеження?")) return;
+    try {
+      await deleteWatch(id);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не вдалося видалити");
+    }
   }
 
   return (
