@@ -43,11 +43,17 @@ available slots.
 - **THEN** the duplicate handler invocation returns early without
   fetching
 
-### Requirement: HTML parsing of the e-queue page
+### Requirement: Raw HTML capture and alert-based change detection
 
-The system SHALL parse the HTML body returned by `EQUEUE_TARGET_URL`
-into a normalized list of services and slots using a versioned parser.
-The current parser version is `html-v1`.
+The system SHALL save the full HTML response on every successful poll into a
+rolling 8-hour buffer, detect page-state changes via a sentinel string, and
+immediately broadcast a Telegram notification to all connected users when the
+"all slots taken" alert disappears or an HTTP error occurs.
+
+> **Context:** The target page (`https://munich.pasport.org.ua/solutions/e-queue`)
+> renders available slots via client-side JavaScript, making them invisible to a
+> plain HTTP GET. The only reliably detectable server-side signal is the presence
+> or absence of the "all slots taken" alert in the static HTML body.
 
 #### Scenario: Target page and HTTP configuration
 - **WHEN** the fetcher runs
@@ -59,58 +65,47 @@ The current parser version is `html-v1`.
   and `Accept-Language: uk-UA,uk;q=0.9,en;q=0.8`; no cookies, no auth,
   no query parameters
 
-#### Scenario: Services are extracted from service nodes
-- **WHEN** the parser processes the HTML body
-- **THEN** it selects nodes matching `[data-service-code], .e-queue-service`;
-  for each node the service code is taken from the `data-service-code`
-  attribute (falling back to the element `id`), and the service label is
-  taken from the first descendant matching `.service-name, [data-service-label]`
-  (falling back to the service code if empty); nodes with an empty
-  resolved code are skipped
+#### Scenario: Raw HTML is saved on every successful poll
+- **WHEN** the e-queue page returns HTTP 2xx
+- **THEN** the full response body is persisted as an `EqueueRawHtml` row
+  with `fetchedAt`, `alertPresent` (bool), and `htmlBody` (full text);
+  before inserting, all rows with `fetchedAt < NOW() - 8 hours` are deleted,
+  keeping the table as a rolling 8-hour buffer (≈96 rows at 5-minute intervals)
 
-#### Scenario: Slots are extracted from slot nodes inside each service
-- **WHEN** a service node is processed
-- **THEN** the parser selects descendants matching
-  `[data-slot-at], .e-queue-slot`; for each slot, the timestamp is taken
-  from the `data-slot-at` attribute (falling back to the element's text
-  content) and parsed as an ISO-8601 datetime in timezone `Europe/Berlin`;
-  the optional `data-slot-id` attribute is stored as `reference`; slots
-  whose timestamp cannot be parsed are skipped silently
+#### Scenario: Alert detection
+- **WHEN** the fetcher returns an HTTP 2xx response
+- **THEN** `alertPresent` is set to `true` if the body contains the literal
+  string `Наразі всі місця зайняті`, and `false` otherwise;
+  detection is a plain `str_contains` check — no DOM parsing
 
-#### Scenario: Normalized snapshot payload shape
-- **WHEN** parsing succeeds
-- **THEN** the persisted `EqueueSnapshot.payload` JSON has shape
-  `{"services": [{"code", "label"}, ...], "slots": [{"serviceCode",
-  "serviceLabel", "slotAt", "reference"}, ...]}`; `slotAt` is formatted
-  as `DateTimeInterface::ATOM` (ISO-8601 with timezone offset);
-  `reference` may be `null`; the parser version is stored separately on
-  the snapshot column `parser_version`
+#### Scenario: Alert absent triggers broadcast
+- **WHEN** `alertPresent` is `false`
+- **THEN** a `BroadcastTelegramMessage` is dispatched every poll until the
+  alert reappears (no dedup); the message text is
+  `"⚡️ Вейкап Нео, стан змінився!\nhttps://munich.pasport.org.ua/solutions/e-queue"`
 
-#### Scenario: Page with no services yields empty snapshot
-- **WHEN** the HTML body contains zero nodes matching the service
-  selectors
-- **THEN** the parser returns an empty `services` and empty `slots`
-  list without raising an exception; the snapshot status is `ok` with
-  `slotCount = 0`
+#### Scenario: HTTP error triggers broadcast
+- **WHEN** the e-queue page returns 4xx/5xx or a network error
+- **THEN** an `EqueueSnapshot` is persisted with `status = http_error`;
+  no `EqueueRawHtml` is saved; a `BroadcastTelegramMessage` is dispatched
+  with text `"🚨 Щось бляха, пішло не в ту дірку"` on every failing poll
 
-#### Scenario: Empty body raises parse error
-- **WHEN** the HTTP response body, after trim, is an empty string
-- **THEN** the parser raises `EqueueParseException("Empty response body")`,
-  which `PollEqueueHandler` records as a `parse_error` snapshot
+#### Scenario: Alert present — silence
+- **WHEN** `alertPresent` is `true`
+- **THEN** no `BroadcastTelegramMessage` is dispatched; only `EqueueRawHtml`
+  and `EqueueSnapshot` are persisted
 
-#### Scenario: Slot signature derivation
-- **WHEN** the evaluator needs a dedup key for a `(watch, slot)` pair
-- **THEN** the signature is
-  `sha256(serviceCode + "|" + slotAt.format(DateTimeInterface::ATOM))`,
-  produced by `SlotSignature::for()`; this is the value stored as
-  `EqueueNotification.slotSignature`
+#### Scenario: Broadcast fan-out
+- **WHEN** a `BroadcastTelegramMessage` is dispatched
+- **THEN** `BroadcastTelegramHandler` queries all `TelegramAccount` rows where
+  `chatId IS NOT NULL` and dispatches one `SendTelegramMessage(chatId, text)`
+  per account onto the `async` transport; users without a connected Telegram
+  account receive nothing
 
-#### Scenario: Date-only matching in the watch window
-- **WHEN** the evaluator compares a slot against a watch
-- **THEN** only the `Y-m-d` portion of `slotAt` is compared against
-  `watch.dateFrom` and `watch.dateTo` (inclusive); the time-of-day
-  portion is ignored for filtering but preserved in the notification
-  text
+#### Scenario: Snapshot records detection version
+- **WHEN** any `EqueueSnapshot` is persisted by `PollEqueueHandler`
+- **THEN** `parserVersion` is set to `'alert-detection-v1'` to distinguish
+  these rows from any future parser-based snapshots
 
 ### Requirement: User watch subscriptions
 

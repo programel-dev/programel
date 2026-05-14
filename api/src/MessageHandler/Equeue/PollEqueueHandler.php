@@ -51,7 +51,7 @@ final class PollEqueueHandler
                     $response->statusCode,
                     [],
                     0,
-                    '',
+                    'alert-detection-v1',
                 ));
                 $this->entityManager->flush();
                 $this->messageBus->dispatch(new BroadcastTelegramMessage('🚨 Щось бляха, пішло не в ту дірку'));
@@ -69,7 +69,7 @@ final class PollEqueueHandler
                 $response->statusCode,
                 ['alertPresent' => $alertPresent],
                 0,
-                '',
+                'alert-detection-v1',
             ));
             $this->entityManager->flush();
 
