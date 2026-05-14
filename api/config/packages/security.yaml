@@ -31,7 +31,9 @@ security:
             stateless: true
             json_login:
                 check_path: /api/v1/auth/login
-                success_handler: lexik_jwt_authentication.handler.authentication_success
+                username_path: email
+                password_path: password
+                success_handler: App\Security\AuthenticationSuccessHandler
                 failure_handler: lexik_jwt_authentication.handler.authentication_failure
 
         refresh:

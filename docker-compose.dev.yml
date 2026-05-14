@@ -60,10 +60,10 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      API_INTERNAL_URL: http://api:9000
+      API_INTERNAL_URL: http://nginx
       NEXT_PUBLIC_API_URL: /api/v1
     ports:
-      - "3000:3000"
+      - "3001:3000"
 
   nginx:
     image: nginx:1.27-alpine
@@ -73,8 +73,8 @@ services:
       - ./docker/nginx/ssl/dev:/etc/nginx/ssl:ro
       - ./static:/var/www/static:ro
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
+      - "8443:443"
     depends_on:
       - api
       - frontend
@@ -103,7 +103,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "6380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -113,8 +113,8 @@ services:
   mailpit:
     image: axllent/mailpit
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "1026:1025"
+      - "8026:8025"
 
 volumes:
   pg_data_dev:

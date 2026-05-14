@@ -78,6 +78,22 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 | `make staging`  | Start staging environment                  |
 | `make deploy`   | Deploy to production                       |
 
+## Dev environment known gotchas
+
+### `API_INTERNAL_URL` — nginx, not PHP-FPM
+Port 9000 is FastCGI, not HTTP. Next.js Server Actions do plain HTTP fetches — connecting to `http://api:9000` causes `ECONNRESET`. Always use `http://nginx` as `API_INTERNAL_URL`. The nginx port 80 server block must handle `/api/` via `fastcgi_pass` (without redirecting to HTTPS).
+
+### nginx must forward `X-Forwarded-Host` with port
+Next.js 16 validates that `x-forwarded-host` matches the `origin` header for Server Actions (CSRF protection). Use `$http_host` (includes port) instead of `$host` (strips port):
+```nginx
+proxy_set_header Host $http_host;
+proxy_set_header X-Forwarded-Host $http_host;
+```
+Without this, POSTing a Server Action returns 500 "Invalid Server Actions request".
+
+### `docker compose restart` does not pick up env var changes
+Use `docker compose up -d --force-recreate <service>` after changing env vars in `docker-compose.yml`.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.

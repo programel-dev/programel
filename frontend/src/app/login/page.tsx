@@ -1,60 +1,40 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { login } from "@/lib/auth";
+import { Suspense, useActionState } from "react";
+import { useSearchParams } from "next/navigation";
+import { loginAction } from "./actions";
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    try {
-      await login(email, password);
-      router.push(redirect);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const action = loginAction.bind(null, redirect);
+  const [error, formAction, pending] = useActionState(action, null);
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 p-8">
+    <form action={formAction} className="w-full max-w-sm space-y-4 p-8">
       <h1 className="text-2xl font-bold">Login</h1>
       {error && <p className="text-red-500 text-sm">{error}</p>}
       <input
         type="email"
+        name="email"
         placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
         required
         className="w-full rounded border p-2"
       />
       <input
         type="password"
+        name="password"
         placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
         required
         className="w-full rounded border p-2"
       />
       <button
         type="submit"
-        disabled={loading}
+        disabled={pending}
         className="w-full rounded bg-blue-600 p-2 text-white hover:bg-blue-700 disabled:opacity-50"
       >
-        {loading ? "Logging in..." : "Log in"}
+        {pending ? "Logging in..." : "Log in"}
       </button>
     </form>
   );
