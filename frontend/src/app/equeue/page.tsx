@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function EqueuePage() {
   return (
-    <main className="mx-auto w-full max-w-3xl space-y-8 p-8">
+    <main className="mx-auto w-full max-w-3xl space-y-8 p-4 sm:p-8">
       <header className="space-y-2">
         <h1 className="text-3xl font-bold">e-queue моніторинг</h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
