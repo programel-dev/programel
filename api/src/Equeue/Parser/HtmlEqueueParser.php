@@ -97,7 +97,7 @@ final class HtmlEqueueParser implements EqueueParserInterface
         }
 
         try {
-            return new \DateTimeImmutable($raw);
+            return new \DateTimeImmutable($raw, new \DateTimeZone('Europe/Berlin'));
         } catch (\Exception) {
             return null;
         }
