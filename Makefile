@@ -1,5 +1,8 @@
 .PHONY: dev prod staging stop logs test behat lint build deploy backup rollback certs help
 
+SERVER_USER ?= root
+SERVER_HOST ?= droplet-programel
+
 COMPOSE_DEV = docker compose -f docker-compose.dev.yml
 COMPOSE_PROD = docker compose -f docker-compose.prod.yml
 COMPOSE_STAGING = docker compose -f docker-compose.staging.yml
@@ -68,6 +71,7 @@ push: ## Push images to registry
 	docker push $(DOCKER_REGISTRY)/frontend:$(IMAGE_TAG)
 
 deploy: ## Deploy to production server
+	scp docker-compose.prod.yml $(SERVER_USER)@$(SERVER_HOST):/opt/programel/docker-compose.prod.yml
 	ssh $(SERVER_USER)@$(SERVER_HOST) '\
 		cd /opt/programel && \
 		docker compose -f docker-compose.prod.yml pull && \
