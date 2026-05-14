@@ -211,4 +211,5 @@ jobs:
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml exec -T api bin/console doctrine:migrations:migrate --no-interaction || true
             docker compose -f docker-compose.prod.yml up -d
+            docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload
             echo "$(date -Iseconds) ${{ github.sha }}" >> .deploy-history
