@@ -34,3 +34,4 @@ Guidelines:
 - Use imperative mood: "add", "fix", "update" — not "added", "fixed", "updated"
 - Keep the title under 50 characters
 - Never add `Co-Authored-By` trailers to commits
+- Never mention AI, Claude, agents, or automation tools in commit messages or PR descriptions
