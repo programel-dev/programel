@@ -40,6 +40,11 @@ final class TelegramWebhookController
             throw new NotFoundHttpException();
         }
 
+        $headerSecret = $request->headers->get('X-Telegram-Bot-Api-Secret-Token', '');
+        if (!hash_equals($this->webhookSecret, $headerSecret)) {
+            throw new NotFoundHttpException();
+        }
+
         $update = json_decode($request->getContent(), true);
         if (!is_array($update)) {
             return new JsonResponse(['ok' => true]);
