@@ -17,7 +17,7 @@ final class FlareSolverrEqueueFetcherTest extends TestCase
 
     public function testSuccessful2xxResponse(): void
     {
-        $html = '<html><body>Доступні місця</body></html>';
+        $html = '<html><body>'.str_repeat('Доступні місця. ', 100).'</body></html>';
 
         $response = $this->createMock(ResponseInterface::class);
         $response->method('toArray')->willReturn([
@@ -77,6 +77,28 @@ final class FlareSolverrEqueueFetcherTest extends TestCase
 
         self::assertFalse($result->isSuccess());
         self::assertSame(403, $result->statusCode);
+        self::assertSame('', $result->body);
+    }
+
+    public function testBlockPageReturnedAs200TreatedAsError(): void
+    {
+        $response = $this->createMock(ResponseInterface::class);
+        $response->method('toArray')->willReturn([
+            'status' => 'ok',
+            'solution' => [
+                'status' => 200,
+                'response' => '<html><body><pre>Blocked for security reasons</pre></body></html>',
+            ],
+        ]);
+
+        $client = $this->createMock(HttpClientInterface::class);
+        $client->method('request')->willReturn($response);
+
+        $fetcher = new FlareSolverrEqueueFetcher($client, self::FLARESOLVERR_URL, self::TARGET_URL, new NullLogger());
+        $result = $fetcher->fetch();
+
+        self::assertFalse($result->isSuccess());
+        self::assertSame(0, $result->statusCode);
         self::assertSame('', $result->body);
     }
 

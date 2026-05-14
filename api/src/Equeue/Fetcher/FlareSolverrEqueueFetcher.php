@@ -55,6 +55,17 @@ final class FlareSolverrEqueueFetcher implements EqueueFetcherInterface
             return new EqueueRawResponse($httpStatus, '', '', $fetchedAt);
         }
 
-        return new EqueueRawResponse($httpStatus, $data['solution']['response'] ?? '', 'text/html', $fetchedAt);
+        $body = $data['solution']['response'] ?? '';
+
+        if (strlen($body) < 1000) {
+            $this->logger->warning('e-queue response suspiciously small, likely a block page', [
+                'bytes' => strlen($body),
+                'preview' => substr($body, 0, 200),
+            ]);
+
+            return new EqueueRawResponse(0, '', '', $fetchedAt);
+        }
+
+        return new EqueueRawResponse($httpStatus, $body, 'text/html', $fetchedAt);
     }
 }
