@@ -95,6 +95,7 @@ final class PollEqueueHandlerTest extends TestCase
         self::assertInstanceOf(EqueueSnapshot::class, $persisted[0]);
         self::assertSame(EqueueSnapshot::STATUS_HTTP_ERROR, $persisted[0]->getStatus());
         self::assertSame(403, $persisted[0]->getHttpStatus());
+        self::assertSame('alert-detection-v1', $persisted[0]->getParserVersion());
 
         self::assertCount(1, $dispatched);
         self::assertInstanceOf(BroadcastTelegramMessage::class, $dispatched[0]);
@@ -118,9 +119,14 @@ final class PollEqueueHandlerTest extends TestCase
         $bus = $this->createMock(MessageBusInterface::class);
         $bus->expects(self::never())->method('dispatch');
 
+        $cutoffs = [];
         $rawHtmlRepo = $this->createMock(EqueueRawHtmlRepository::class);
-        $rawHtmlRepo->expects(self::once())->method('deleteOlderThan');
+        $rawHtmlRepo->expects(self::once())->method('deleteOlderThan')
+            ->willReturnCallback(function (\DateTimeImmutable $cutoff) use (&$cutoffs): void {
+                $cutoffs[] = $cutoff;
+            });
 
+        $before = new \DateTimeImmutable('-8 hours');
         $handler = new PollEqueueHandler(
             $fetcher,
             $rawHtmlRepo,
@@ -129,6 +135,7 @@ final class PollEqueueHandlerTest extends TestCase
             $this->lockFactory,
             new NullLogger(),
         );
+        $after = new \DateTimeImmutable('-8 hours');
 
         ($handler)(new PollEqueueMessage());
 
@@ -140,6 +147,11 @@ final class PollEqueueHandlerTest extends TestCase
 
         $snapshot = array_values(array_filter($persisted, fn ($e) => $e instanceof EqueueSnapshot))[0];
         self::assertSame(EqueueSnapshot::STATUS_OK, $snapshot->getStatus());
+        self::assertSame('alert-detection-v1', $snapshot->getParserVersion());
+
+        self::assertCount(1, $cutoffs);
+        self::assertGreaterThanOrEqual($before->getTimestamp(), $cutoffs[0]->getTimestamp());
+        self::assertLessThanOrEqual($after->getTimestamp(), $cutoffs[0]->getTimestamp());
     }
 
     public function testAlertAbsentSavesHtmlAndBroadcasts(): void
@@ -166,9 +178,14 @@ final class PollEqueueHandlerTest extends TestCase
             }
         );
 
+        $cutoffs = [];
         $rawHtmlRepo = $this->createMock(EqueueRawHtmlRepository::class);
-        $rawHtmlRepo->expects(self::once())->method('deleteOlderThan');
+        $rawHtmlRepo->expects(self::once())->method('deleteOlderThan')
+            ->willReturnCallback(function (\DateTimeImmutable $cutoff) use (&$cutoffs): void {
+                $cutoffs[] = $cutoff;
+            });
 
+        $before = new \DateTimeImmutable('-8 hours');
         $handler = new PollEqueueHandler(
             $fetcher,
             $rawHtmlRepo,
@@ -177,14 +194,22 @@ final class PollEqueueHandlerTest extends TestCase
             $this->lockFactory,
             new NullLogger(),
         );
+        $after = new \DateTimeImmutable('-8 hours');
 
         ($handler)(new PollEqueueMessage());
 
         $rawHtmlEntity = array_values(array_filter($persisted, fn ($e) => $e instanceof EqueueRawHtml))[0];
         self::assertFalse($rawHtmlEntity->isAlertPresent());
 
+        $snapshot = array_values(array_filter($persisted, fn ($e) => $e instanceof EqueueSnapshot))[0];
+        self::assertSame('alert-detection-v1', $snapshot->getParserVersion());
+
         self::assertCount(1, $dispatched);
         self::assertInstanceOf(BroadcastTelegramMessage::class, $dispatched[0]);
         self::assertStringContainsString('Вейкап Нео', $dispatched[0]->text);
+
+        self::assertCount(1, $cutoffs);
+        self::assertGreaterThanOrEqual($before->getTimestamp(), $cutoffs[0]->getTimestamp());
+        self::assertLessThanOrEqual($after->getTimestamp(), $cutoffs[0]->getTimestamp());
     }
 }
