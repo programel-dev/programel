@@ -62,13 +62,13 @@ fixtures: ## Load database fixtures
 
 # --- Build & Deploy ---
 
-build: ## Build Docker images for production
-	docker build --target prod -t $(DOCKER_REGISTRY)/api:$(IMAGE_TAG) -f docker/api/Dockerfile .
-	docker build --target prod -t $(DOCKER_REGISTRY)/frontend:$(IMAGE_TAG) -f docker/frontend/Dockerfile .
+build: ## Build Docker images for production (linux/amd64)
+	docker buildx build --platform linux/amd64 --target prod -t $(DOCKER_REGISTRY)/api:$(IMAGE_TAG) -f docker/api/Dockerfile .
+	docker buildx build --platform linux/amd64 --target prod -t $(DOCKER_REGISTRY)/frontend:$(IMAGE_TAG) -f docker/frontend/Dockerfile .
 
 push: ## Push images to registry
-	docker push $(DOCKER_REGISTRY)/api:$(IMAGE_TAG)
-	docker push $(DOCKER_REGISTRY)/frontend:$(IMAGE_TAG)
+	docker buildx build --platform linux/amd64 --target prod -t $(DOCKER_REGISTRY)/api:$(IMAGE_TAG) -f docker/api/Dockerfile --push .
+	docker buildx build --platform linux/amd64 --target prod -t $(DOCKER_REGISTRY)/frontend:$(IMAGE_TAG) -f docker/frontend/Dockerfile --push .
 
 deploy: ## Deploy to production server
 	rsync -az docker-compose.prod.yml docker/nginx $(SERVER_USER)@$(SERVER_HOST):/opt/programel/
