@@ -11,7 +11,7 @@ const tools = [
 
 export default function HomePage() {
   return (
-    <main className="mx-auto w-full max-w-3xl space-y-10 p-8">
+    <main className="mx-auto w-full max-w-3xl space-y-10 p-4 sm:p-8">
       <section>
         <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-400">
           Інструменти

@@ -64,7 +64,7 @@ export function WatchList() {
           {watches.map((watch) => (
             <li
               key={watch.id}
-              className="flex items-center justify-between gap-3 rounded-md border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900"
+              className="flex flex-col gap-2 rounded-md border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
                 <p className="font-medium">
