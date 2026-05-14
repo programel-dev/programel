@@ -51,7 +51,7 @@ services:
     image: ${DOCKER_REGISTRY}/frontend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
-      API_INTERNAL_URL: http://api:9000
+      API_INTERNAL_URL: http://nginx
       NEXT_PUBLIC_API_URL: /api/v1
       SENTRY_DSN: ${SENTRY_DSN}
 
