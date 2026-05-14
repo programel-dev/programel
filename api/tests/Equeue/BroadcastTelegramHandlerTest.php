@@ -45,6 +45,7 @@ final class BroadcastTelegramHandlerTest extends TestCase
         self::assertSame('⚡️ Вейкап Нео!', $dispatched[0]->text);
         self::assertInstanceOf(SendTelegramMessage::class, $dispatched[1]);
         self::assertSame('222', $dispatched[1]->chatId);
+        self::assertSame('⚡️ Вейкап Нео!', $dispatched[1]->text);
     }
 
     public function testDoesNothingWhenNoConnectedAccounts(): void
