@@ -71,12 +71,13 @@ push: ## Push images to registry
 	docker push $(DOCKER_REGISTRY)/frontend:$(IMAGE_TAG)
 
 deploy: ## Deploy to production server
-	scp docker-compose.prod.yml $(SERVER_USER)@$(SERVER_HOST):/opt/programel/docker-compose.prod.yml
+	rsync -az docker-compose.prod.yml docker/nginx $(SERVER_USER)@$(SERVER_HOST):/opt/programel/
 	ssh $(SERVER_USER)@$(SERVER_HOST) '\
 		cd /opt/programel && \
 		docker compose -f docker-compose.prod.yml pull && \
 		docker compose -f docker-compose.prod.yml exec api bin/console doctrine:migrations:migrate --no-interaction && \
 		docker compose -f docker-compose.prod.yml up -d && \
+		docker compose -f docker-compose.prod.yml exec nginx nginx -s reload && \
 		echo "$$(date -Iseconds) $(IMAGE_TAG)" >> .deploy-history \
 	'
 
