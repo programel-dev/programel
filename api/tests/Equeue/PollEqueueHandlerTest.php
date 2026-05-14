@@ -118,9 +118,12 @@ final class PollEqueueHandlerTest extends TestCase
         $bus = $this->createMock(MessageBusInterface::class);
         $bus->expects(self::never())->method('dispatch');
 
+        $rawHtmlRepo = $this->createMock(EqueueRawHtmlRepository::class);
+        $rawHtmlRepo->expects(self::once())->method('deleteOlderThan');
+
         $handler = new PollEqueueHandler(
             $fetcher,
-            $this->createMock(EqueueRawHtmlRepository::class),
+            $rawHtmlRepo,
             $em,
             $bus,
             $this->lockFactory,
@@ -163,9 +166,12 @@ final class PollEqueueHandlerTest extends TestCase
             }
         );
 
+        $rawHtmlRepo = $this->createMock(EqueueRawHtmlRepository::class);
+        $rawHtmlRepo->expects(self::once())->method('deleteOlderThan');
+
         $handler = new PollEqueueHandler(
             $fetcher,
-            $this->createMock(EqueueRawHtmlRepository::class),
+            $rawHtmlRepo,
             $em,
             $bus,
             $this->lockFactory,
