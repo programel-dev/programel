@@ -101,9 +101,10 @@ The system SHALL send at most one Telegram notification per
 #### Scenario: Duplicate slot suppressed
 - **WHEN** the same (watch, slot) pair is evaluated in a subsequent
   poll
-- **THEN** the unique constraint on `(watch_id, slot_signature)` causes
-  the insert to fail with `UniqueConstraintViolationException`; the
-  evaluator catches it and skips dispatching the message
+- **THEN** the evaluator checks existence via
+  `EqueueNotificationRepository::exists()` before inserting; if the
+  notification already exists the slot is skipped and no message is
+  dispatched
 
 #### Scenario: Race-safe under concurrent handlers
 - **WHEN** two evaluator handlers process the same (watch, slot) pair
