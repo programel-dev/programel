@@ -207,6 +207,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /opt/programel
+            chmod 644 api/config/jwt/private.pem 2>/dev/null || true
             export IMAGE_TAG=${{ github.sha }}
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml exec -T api bin/console doctrine:migrations:migrate --no-interaction || true
