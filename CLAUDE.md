@@ -64,6 +64,17 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
+## Git workflow
+
+**Never commit directly to `main`.** Always create a branch from a clean `main` before making any changes:
+
+```
+git checkout main && git pull
+git checkout -b <type>/<description>
+```
+
+Commit all work there, then open a PR to merge into `main`.
+
 ## Development commands (Makefile)
 
 | Command         | Purpose                                    |
