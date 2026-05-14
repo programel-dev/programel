@@ -33,4 +33,13 @@ class TelegramAccountRepository extends ServiceEntityRepository
     {
         return $this->findOneBy(['chatId' => $chatId]);
     }
+
+    /** @return list<TelegramAccount> */
+    public function findAllConnected(): array
+    {
+        return $this->createQueryBuilder('t')
+            ->where('t.chatId IS NOT NULL')
+            ->getQuery()
+            ->getResult();
+    }
 }
