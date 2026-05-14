@@ -43,6 +43,75 @@ available slots.
 - **THEN** the duplicate handler invocation returns early without
   fetching
 
+### Requirement: HTML parsing of the e-queue page
+
+The system SHALL parse the HTML body returned by `EQUEUE_TARGET_URL`
+into a normalized list of services and slots using a versioned parser.
+The current parser version is `html-v1`.
+
+#### Scenario: Target page and HTTP configuration
+- **WHEN** the fetcher runs
+- **THEN** it performs a `GET` against `EQUEUE_TARGET_URL`
+  (default `https://munich.pasport.org.ua/solutions/e-queue`) using the
+  Symfony scoped HTTP client `equeue.client` with `timeout: 10s`,
+  `max_duration: 15s`, header `User-Agent` from `EQUEUE_USER_AGENT`,
+  `Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8`,
+  and `Accept-Language: uk-UA,uk;q=0.9,en;q=0.8`; no cookies, no auth,
+  no query parameters
+
+#### Scenario: Services are extracted from service nodes
+- **WHEN** the parser processes the HTML body
+- **THEN** it selects nodes matching `[data-service-code], .e-queue-service`;
+  for each node the service code is taken from the `data-service-code`
+  attribute (falling back to the element `id`), and the service label is
+  taken from the first descendant matching `.service-name, [data-service-label]`
+  (falling back to the service code if empty); nodes with an empty
+  resolved code are skipped
+
+#### Scenario: Slots are extracted from slot nodes inside each service
+- **WHEN** a service node is processed
+- **THEN** the parser selects descendants matching
+  `[data-slot-at], .e-queue-slot`; for each slot, the timestamp is taken
+  from the `data-slot-at` attribute (falling back to the element's text
+  content) and parsed as an ISO-8601 datetime in timezone `Europe/Berlin`;
+  the optional `data-slot-id` attribute is stored as `reference`; slots
+  whose timestamp cannot be parsed are skipped silently
+
+#### Scenario: Normalized snapshot payload shape
+- **WHEN** parsing succeeds
+- **THEN** the persisted `EqueueSnapshot.payload` JSON has shape
+  `{"services": [{"code", "label"}, ...], "slots": [{"serviceCode",
+  "serviceLabel", "slotAt", "reference"}, ...]}`; `slotAt` is formatted
+  as `DateTimeInterface::ATOM` (ISO-8601 with timezone offset);
+  `reference` may be `null`; the parser version is stored separately on
+  the snapshot column `parser_version`
+
+#### Scenario: Page with no services yields empty snapshot
+- **WHEN** the HTML body contains zero nodes matching the service
+  selectors
+- **THEN** the parser returns an empty `services` and empty `slots`
+  list without raising an exception; the snapshot status is `ok` with
+  `slotCount = 0`
+
+#### Scenario: Empty body raises parse error
+- **WHEN** the HTTP response body, after trim, is an empty string
+- **THEN** the parser raises `EqueueParseException("Empty response body")`,
+  which `PollEqueueHandler` records as a `parse_error` snapshot
+
+#### Scenario: Slot signature derivation
+- **WHEN** the evaluator needs a dedup key for a `(watch, slot)` pair
+- **THEN** the signature is
+  `sha256(serviceCode + "|" + slotAt.format(DateTimeInterface::ATOM))`,
+  produced by `SlotSignature::for()`; this is the value stored as
+  `EqueueNotification.slotSignature`
+
+#### Scenario: Date-only matching in the watch window
+- **WHEN** the evaluator compares a slot against a watch
+- **THEN** only the `Y-m-d` portion of `slotAt` is compared against
+  `watch.dateFrom` and `watch.dateTo` (inclusive); the time-of-day
+  portion is ignored for filtering but preserved in the notification
+  text
+
 ### Requirement: User watch subscriptions
 
 The system SHALL allow authenticated users to create, read, update, and
