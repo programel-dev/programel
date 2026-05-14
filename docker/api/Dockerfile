@@ -42,7 +42,22 @@ RUN composer dump-autoload --optimize --classmap-authoritative \
     && rm /usr/bin/composer \
     && echo "APP_ENV=prod" > .env \
     && mkdir -p var/cache var/log \
-    && APP_ENV=prod php bin/console cache:warmup \
+    && APP_ENV=prod \
+       APP_SECRET=placeholder \
+       DATABASE_URL="postgresql://localhost:5432/db?serverVersion=16" \
+       REDIS_URL="redis://localhost:6379" \
+       LOCK_DSN="redis://localhost:6379" \
+       MAILER_DSN="null://null" \
+       JWT_PASSPHRASE=placeholder \
+       JWT_SECRET_KEY=/dev/null \
+       JWT_PUBLIC_KEY=/dev/null \
+       SENTRY_DSN="" \
+       TELEGRAM_BOT_TOKEN=placeholder \
+       TELEGRAM_BOT_USERNAME=placeholder \
+       TELEGRAM_WEBHOOK_SECRET=placeholder \
+       EQUEUE_TARGET_URL="https://placeholder.example" \
+       EQUEUE_USER_AGENT=placeholder \
+       php bin/console cache:warmup \
     && chown -R www-data:www-data var .env
 
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
