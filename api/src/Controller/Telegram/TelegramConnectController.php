@@ -9,13 +9,14 @@ use App\Entity\User;
 use App\Repository\Telegram\TelegramAccountRepository;
 use App\Telegram\ConnectTokenGenerator;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
-final class TelegramConnectController
+final class TelegramConnectController extends AbstractController
 {
     public function __construct(
         private readonly Security $security,

@@ -10,13 +10,14 @@ use App\Telegram\TelegramApiException;
 use App\Telegram\TelegramClient;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
-final class TelegramWebhookController
+final class TelegramWebhookController extends AbstractController
 {
     public function __construct(
         private readonly TelegramAccountRepository $telegramAccountRepository,
