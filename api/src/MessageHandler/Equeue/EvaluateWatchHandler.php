@@ -9,10 +9,10 @@ use App\Entity\Equeue\EqueueWatch;
 use App\Equeue\SlotSignature;
 use App\Message\Equeue\EvaluateWatchMessage;
 use App\Message\Telegram\SendTelegramMessage;
+use App\Repository\Equeue\EqueueNotificationRepository;
 use App\Repository\Equeue\EqueueSnapshotRepository;
 use App\Repository\Equeue\EqueueWatchRepository;
 use App\Repository\Telegram\TelegramAccountRepository;
-use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -24,6 +24,7 @@ final class EvaluateWatchHandler
     public function __construct(
         private readonly EqueueWatchRepository $watchRepository,
         private readonly EqueueSnapshotRepository $snapshotRepository,
+        private readonly EqueueNotificationRepository $notificationRepository,
         private readonly TelegramAccountRepository $telegramAccountRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly MessageBusInterface $messageBus,
@@ -74,16 +75,13 @@ final class EvaluateWatchHandler
             }
 
             $signature = SlotSignature::for($watch->getServiceCode(), $slotAt);
-            $notification = new EqueueNotification($watch, $signature);
-
-            try {
-                $this->entityManager->persist($notification);
-                $this->entityManager->flush();
-            } catch (UniqueConstraintViolationException) {
-                $this->entityManager->detach($notification);
-
+            if ($this->notificationRepository->exists($watch, $signature)) {
                 continue;
             }
+
+            $notification = new EqueueNotification($watch, $signature);
+            $this->entityManager->persist($notification);
+            $this->entityManager->flush();
 
             $serviceLabel = isset($slot['serviceLabel']) ? (string) $slot['serviceLabel'] : $watch->getServiceCode();
             $text = $this->formatMessage($serviceLabel, $slotAt);

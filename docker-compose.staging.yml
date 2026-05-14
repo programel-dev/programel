@@ -23,6 +23,26 @@ services:
       redis-staging:
         condition: service_healthy
 
+  worker-staging:
+    image: ${DOCKER_REGISTRY}/api:${IMAGE_TAG:-latest}
+    command: bin/console messenger:consume async scheduler_default --memory-limit=128M --time-limit=3600
+    restart: unless-stopped
+    environment:
+      APP_ENV: staging
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-staging:5432/programel_staging?serverVersion=16
+      REDIS_URL: redis://redis-staging:6379
+      LOCK_DSN: redis://redis-staging:6379
+      MAILER_DSN: ${MAILER_DSN}
+      SENTRY_DSN: ${SENTRY_DSN}
+      APP_SECRET: ${APP_SECRET}
+      EQUEUE_TARGET_URL: ${EQUEUE_TARGET_URL:-https://munich.pasport.org.ua/solutions/e-queue}
+      EQUEUE_POLL_INTERVAL: ${EQUEUE_POLL_INTERVAL:-300}
+      EQUEUE_USER_AGENT: ${EQUEUE_USER_AGENT}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+    depends_on:
+      - api-staging
+
   frontend-staging:
     image: ${DOCKER_REGISTRY}/frontend:${IMAGE_TAG:-latest}
     restart: unless-stopped
