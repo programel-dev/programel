@@ -125,6 +125,12 @@ jobs:
         env:
           JWT_PASSPHRASE: test-passphrase
 
+      - name: Create test database
+        working-directory: api
+        run: php bin/console doctrine:database:create --if-not-exists
+        env:
+          APP_ENV: test
+
       - name: Run migrations
         working-directory: api
         run: php bin/console doctrine:migrations:migrate --no-interaction
