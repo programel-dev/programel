@@ -9,7 +9,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: MonitoringConfigRepository::class)]
 #[ORM\Table(name: 'monitoring_config')]
-class MonitoringConfig
+final class MonitoringConfig
 {
     #[ORM\Id]
     #[ORM\Column]
