@@ -23,6 +23,11 @@ final class MonitoringConfigRepository extends ServiceEntityRepository implement
         return $this->find(1)?->isEnabled() ?? true;
     }
 
+    public function getConfig(): ?MonitoringConfig
+    {
+        return $this->find(1);
+    }
+
     public function getOrCreate(): MonitoringConfig
     {
         return $this->find(1) ?? new MonitoringConfig();

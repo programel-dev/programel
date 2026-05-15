@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\User;
-use App\Repository\MonitoringConfigRepository;
+use App\Repository\MonitoringConfigRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -18,7 +18,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class AdminMonitoringController extends AbstractController
 {
     public function __construct(
-        private readonly MonitoringConfigRepository $monitoringConfigRepository,
+        private readonly MonitoringConfigRepositoryInterface $monitoringConfigRepository,
         private readonly EntityManagerInterface $entityManager,
     ) {
     }
@@ -26,7 +26,7 @@ final class AdminMonitoringController extends AbstractController
     #[Route('', name: 'get', methods: ['GET'])]
     public function get(): JsonResponse
     {
-        $config = $this->monitoringConfigRepository->find(1);
+        $config = $this->monitoringConfigRepository->getConfig();
 
         return $this->json([
             'enabled' => $config?->isEnabled() ?? true,

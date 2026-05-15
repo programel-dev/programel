@@ -99,7 +99,8 @@ final class FeatureContext implements Context
     public function theResponseShouldBeInJson(): void
     {
         $content = $this->response->getContent();
-        if (null === json_decode($content)) {
+        json_decode($content, true);
+        if (\JSON_ERROR_NONE !== json_last_error()) {
             throw new \RuntimeException('Response is not valid JSON: '.$content);
         }
     }
@@ -150,10 +151,11 @@ final class FeatureContext implements Context
             $user = new User();
             $user->setEmail($email);
             $user->setPassword($this->passwordHasher->hashPassword($user, 'behat-password'));
-            $user->setRoles($roles);
             $this->entityManager->persist($user);
-            $this->entityManager->flush();
         }
+
+        $user->setRoles($roles);
+        $this->entityManager->flush();
 
         return $this->jwtManager->create($user);
     }

@@ -50,3 +50,11 @@ Feature: Admin monitoring toggle
       {}
       """
     Then the response status code should be 400
+
+  Scenario: PATCH with non-boolean enabled returns 400
+    Given I am authenticated as admin
+    When I send a "PATCH" request to "/api/v1/admin/monitoring" with body:
+      """
+      {"enabled": "yes"}
+      """
+    Then the response status code should be 400
