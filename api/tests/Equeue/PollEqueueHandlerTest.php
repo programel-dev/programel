@@ -13,6 +13,7 @@ use App\Message\Equeue\PollEqueueMessage;
 use App\MessageHandler\Equeue\PollEqueueHandler;
 use App\Repository\Equeue\EqueueRawHtmlRepository;
 use App\Repository\Equeue\EqueueSnapshotRepository;
+use App\Repository\MonitoringConfigRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -253,14 +254,18 @@ final class PollEqueueHandlerTest extends TestCase
         ?EqueueSnapshotRepository $snapshotRepo = null,
         ?EqueueRawHtmlRepository $rawHtmlRepo = null,
     ): PollEqueueHandler {
+        $monitoring = $this->createMock(MonitoringConfigRepositoryInterface::class);
+        $monitoring->method('isEnabled')->willReturn(true);
+
         return new PollEqueueHandler(
-            $fetcher ?? $this->createMock(EqueueFetcherInterface::class),
-            $rawHtmlRepo ?? $this->createMock(EqueueRawHtmlRepository::class),
-            $em ?? $this->createMock(EntityManagerInterface::class),
-            $bus ?? $this->createMock(MessageBusInterface::class),
-            $lockFactory ?? $this->lockFactory,
-            $snapshotRepo ?? $this->createMock(EqueueSnapshotRepository::class),
-            new NullLogger(),
+            fetcher: $fetcher ?? $this->createMock(EqueueFetcherInterface::class),
+            rawHtmlRepository: $rawHtmlRepo ?? $this->createMock(EqueueRawHtmlRepository::class),
+            entityManager: $em ?? $this->createMock(EntityManagerInterface::class),
+            messageBus: $bus ?? $this->createMock(MessageBusInterface::class),
+            lockFactory: $lockFactory ?? $this->lockFactory,
+            snapshotRepository: $snapshotRepo ?? $this->createMock(EqueueSnapshotRepository::class),
+            logger: new NullLogger(),
+            monitoringConfigRepository: $monitoring,
         );
     }
 

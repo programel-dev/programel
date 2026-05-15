@@ -11,7 +11,7 @@ use Doctrine\Persistence\ManagerRegistry;
 /**
  * @extends ServiceEntityRepository<MonitoringConfig>
  */
-final class MonitoringConfigRepository extends ServiceEntityRepository
+final class MonitoringConfigRepository extends ServiceEntityRepository implements MonitoringConfigRepositoryInterface
 {
     public function __construct(ManagerRegistry $registry)
     {
