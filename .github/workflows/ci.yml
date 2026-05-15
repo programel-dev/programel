@@ -121,9 +121,9 @@ jobs:
 
       - name: Generate JWT keypair
         working-directory: api
-        run: APP_ENV=test php bin/console lexik:jwt:generate-keypair --skip-if-exists
+        run: php bin/console lexik:jwt:generate-keypair --skip-if-exists
         env:
-          JWT_PASSPHRASE: test-passphrase
+          APP_ENV: test
 
       - name: Create test database
         working-directory: api
