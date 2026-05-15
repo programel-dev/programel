@@ -75,7 +75,7 @@ jobs:
         env:
           POSTGRES_USER: programel
           POSTGRES_PASSWORD: programel
-          POSTGRES_DB: programel_test
+          POSTGRES_DB: programel
         ports:
           - 5432:5432
         options: >-
@@ -109,7 +109,7 @@ jobs:
         run: |
           echo "APP_ENV=test" > .env
           echo "APP_SECRET=test-secret" >> .env
-          echo "DATABASE_URL=postgresql://programel:programel@localhost:5432/programel_test?serverVersion=16" >> .env
+          echo "DATABASE_URL=postgresql://programel:programel@localhost:5432/programel?serverVersion=16" >> .env
           echo "REDIS_URL=redis://localhost:6379" >> .env
           echo "MAILER_DSN=null://null" >> .env
           echo "JWT_PASSPHRASE=test-passphrase" >> .env
