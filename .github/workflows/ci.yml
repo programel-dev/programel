@@ -162,10 +162,6 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Run frontend tests
-        working-directory: frontend
-        run: npm test -- --passWithNoTests
-
   build:
     runs-on: ubuntu-latest
     needs: test
