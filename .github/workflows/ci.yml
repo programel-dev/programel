@@ -148,6 +148,7 @@ jobs:
         working-directory: api
         env:
           APP_ENV: test
+          REDIS_URL: redis://127.0.0.1:6379
         run: vendor/bin/behat --no-interaction
 
       - name: Setup Node
