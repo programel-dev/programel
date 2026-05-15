@@ -30,7 +30,7 @@ final class AdminMonitoringController extends AbstractController
 
         return $this->json([
             'enabled' => $config?->isEnabled() ?? true,
-            'updatedAt' => $config?->getUpdatedAt()->format(\DateTimeInterface::ATOM),
+            'updatedAt' => $config?->getUpdatedAt()?->format(\DateTimeInterface::ATOM),
             'updatedBy' => $config?->getUpdatedBy()?->getEmail(),
         ]);
     }
