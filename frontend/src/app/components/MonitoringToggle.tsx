@@ -13,6 +13,7 @@ export function MonitoringToggle({ initial }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   async function handleToggle() {
+    const previous = status;          // explicit snapshot before mutations
     const next = !status.enabled;
     setSaving(true);
     setError(null);
@@ -22,7 +23,7 @@ export function MonitoringToggle({ initial }: Props) {
       const updated = await setMonitoringEnabled(next);
       setStatus(updated);
     } catch {
-      setStatus(status);
+      setStatus(previous);            // restore the explicit snapshot
       setError("Не вдалося зберегти");
     } finally {
       setSaving(false);
@@ -41,6 +42,7 @@ export function MonitoringToggle({ initial }: Props) {
         <button
           role="switch"
           aria-checked={status.enabled}
+          aria-label="Polling equeue"
           onClick={handleToggle}
           disabled={saving}
           className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors disabled:opacity-50 ${
@@ -56,7 +58,7 @@ export function MonitoringToggle({ initial }: Props) {
           />
         </button>
       </div>
-      {status.updatedBy && (
+      {status.updatedBy && status.updatedAt && (
         <p className="mt-2 text-xs text-zinc-400 dark:text-zinc-500">
           {formatRelative(status.updatedAt)} · {status.updatedBy}
         </p>
@@ -73,5 +75,6 @@ function formatRelative(dateStr: string | null): string {
   const diffMin = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60_000);
   if (diffMin < 1) return "щойно";
   if (diffMin < 60) return `${diffMin} хв тому`;
-  return `${Math.floor(diffMin / 60)} год тому`;
+  if (diffMin < 1440) return `${Math.floor(diffMin / 60)} год тому`;
+  return `${Math.floor(diffMin / 1440)} дн тому`;
 }
