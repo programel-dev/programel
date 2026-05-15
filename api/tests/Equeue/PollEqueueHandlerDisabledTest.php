@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\MessageHandler\Equeue;
+namespace App\Tests\Equeue;
 
 use App\Equeue\Fetcher\EqueueFetcherInterface;
 use App\Message\Equeue\PollEqueueMessage;
