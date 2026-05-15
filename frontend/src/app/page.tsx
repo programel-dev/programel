@@ -30,8 +30,8 @@ export default async function HomePage() {
     ? decodeJwtRoles(token).includes("ROLE_ADMIN")
     : false;
 
-  const monitoringStatus = isAdmin && token
-    ? await getMonitoringStatus(token).catch(() => null)
+  const monitoringStatus = isAdmin
+    ? await getMonitoringStatus(token!).catch(() => null)
     : null;
 
   return (
