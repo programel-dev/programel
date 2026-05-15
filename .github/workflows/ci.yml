@@ -114,7 +114,7 @@ jobs:
           echo "MAILER_DSN=null://null" >> .env
           echo "JWT_PASSPHRASE=test-passphrase" >> .env
           echo "SENTRY_DSN=" >> .env
-          echo "REDIS_URL=redis://127.0.0.1:6379" > .env.test.local
+          echo "REDIS_URL=redis://127.0.0.1:6379" >> .env.test
 
       - name: Install API dependencies
         working-directory: api
