@@ -57,7 +57,7 @@ final class PollEqueueHandlerTest extends TestCase
 
     // --- HTTP error cases ---
 
-    public function testFirstPollHttpErrorBroadcasts(): void
+    public function testFirstPollHttpErrorSilent(): void
     {
         $response = new EqueueRawResponse(403, '', 'text/html', new \DateTimeImmutable());
 
@@ -71,13 +71,10 @@ final class PollEqueueHandlerTest extends TestCase
         self::assertSame(EqueueSnapshot::STATUS_HTTP_ERROR, $persisted[0]->getStatus());
         self::assertSame(403, $persisted[0]->getHttpStatus());
         self::assertSame('cloudflare-bypass-v1', $persisted[0]->getParserVersion());
-
-        self::assertCount(1, $dispatched);
-        self::assertInstanceOf(BroadcastTelegramMessage::class, $dispatched[0]);
-        self::assertSame('🚨 Щось бляха, пішло не в ту дірку', $dispatched[0]->text);
+        self::assertCount(0, $dispatched);
     }
 
-    public function testOkToHttpErrorBroadcasts(): void
+    public function testOkToHttpErrorSilent(): void
     {
         $previous = $this->makeSnapshot(EqueueSnapshot::STATUS_OK, 200, ['alertPresent' => true]);
         $response = new EqueueRawResponse(503, '', '', new \DateTimeImmutable());
@@ -86,8 +83,7 @@ final class PollEqueueHandlerTest extends TestCase
 
         self::assertCount(1, $persisted);
         self::assertSame(EqueueSnapshot::STATUS_HTTP_ERROR, $persisted[0]->getStatus());
-        self::assertCount(1, $dispatched);
-        self::assertSame('🚨 Щось бляха, пішло не в ту дірку', $dispatched[0]->text);
+        self::assertCount(0, $dispatched);
     }
 
     public function testConsecutiveHttpErrorsSilent(): void
