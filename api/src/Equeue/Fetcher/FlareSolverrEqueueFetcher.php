@@ -40,7 +40,7 @@ final class FlareSolverrEqueueFetcher implements EqueueFetcherInterface
                     'url' => $this->targetUrl,
                     'maxTimeout' => 30000,
                 ],
-                'timeout' => 35,
+                'timeout' => 50,
             ]);
 
             $data = $response->toArray();
