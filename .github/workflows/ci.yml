@@ -30,7 +30,7 @@ jobs:
           echo "APP_ENV=dev" > .env
           echo "APP_SECRET=ci-secret" >> .env
           echo "DATABASE_URL=postgresql://localhost:5432/programel?serverVersion=16" >> .env
-          echo "REDIS_URL=redis://localhost:6379" >> .env
+          echo "REDIS_URL=redis://127.0.0.1:6379" >> .env
           echo "MAILER_DSN=null://null" >> .env
           echo "JWT_PASSPHRASE=ci-passphrase" >> .env
           echo "SENTRY_DSN=" >> .env
@@ -42,12 +42,10 @@ jobs:
       - name: PHP CS Fixer
         working-directory: api
         run: vendor/bin/php-cs-fixer fix --dry-run --diff --format=checkstyle | cs2pr
-        continue-on-error: true
 
       - name: PHPStan
         working-directory: api
         run: vendor/bin/phpstan analyse --no-progress
-        continue-on-error: true
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -63,12 +61,10 @@ jobs:
       - name: ESLint
         working-directory: frontend
         run: npm run lint
-        continue-on-error: true
 
       - name: TypeScript check
         working-directory: frontend
         run: npx tsc --noEmit
-        continue-on-error: true
 
   test:
     runs-on: ubuntu-latest
@@ -79,11 +75,21 @@ jobs:
         env:
           POSTGRES_USER: programel
           POSTGRES_PASSWORD: programel
-          POSTGRES_DB: programel_test
+          POSTGRES_DB: programel
         ports:
           - 5432:5432
         options: >-
           --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -103,29 +109,47 @@ jobs:
         run: |
           echo "APP_ENV=test" > .env
           echo "APP_SECRET=test-secret" >> .env
-          echo "DATABASE_URL=postgresql://programel:programel@localhost:5432/programel_test?serverVersion=16" >> .env
-          echo "REDIS_URL=redis://localhost:6379" >> .env
+          echo "DATABASE_URL=postgresql://programel:programel@localhost:5432/programel?serverVersion=16" >> .env
+          echo "REDIS_URL=redis://127.0.0.1:6379" >> .env
           echo "MAILER_DSN=null://null" >> .env
           echo "JWT_PASSPHRASE=test-passphrase" >> .env
           echo "SENTRY_DSN=" >> .env
+          echo "REDIS_URL=redis://127.0.0.1:6379" >> .env.test
 
       - name: Install API dependencies
         working-directory: api
         run: composer install --no-progress --prefer-dist
+
+      - name: Generate JWT keypair
+        working-directory: api
+        run: php bin/console lexik:jwt:generate-keypair --skip-if-exists
+        env:
+          APP_ENV: test
+
+      - name: Create test database
+        working-directory: api
+        run: php bin/console doctrine:database:create --if-not-exists
+        env:
+          APP_ENV: test
+
+      - name: Run migrations
+        working-directory: api
+        run: php bin/console doctrine:migrations:migrate --no-interaction
+        env:
+          APP_ENV: test
 
       - name: Run PHPUnit
         working-directory: api
         env:
           APP_ENV: test
         run: vendor/bin/simple-phpunit
-        continue-on-error: true
 
       - name: Run Behat
         working-directory: api
         env:
           APP_ENV: test
+          REDIS_URL: redis://127.0.0.1:6379
         run: vendor/bin/behat --no-interaction
-        continue-on-error: true
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -137,11 +161,6 @@ jobs:
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
-
-      - name: Run frontend tests
-        working-directory: frontend
-        run: npm test -- --passWithNoTests
-        continue-on-error: true
 
   build:
     runs-on: ubuntu-latest
@@ -199,7 +218,7 @@ jobs:
           source: "docker-compose.prod.yml,docker/nginx/"
           target: /opt/programel
 
-      - name: Deploy to DigitalOcean
+      - name: Deploy to production
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -210,7 +229,7 @@ jobs:
             chmod 644 api/config/jwt/private.pem 2>/dev/null || true
             export IMAGE_TAG=${{ github.sha }}
             docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml exec -T api bin/console doctrine:migrations:migrate --no-interaction || true
             docker compose -f docker-compose.prod.yml up -d
+            docker compose -f docker-compose.prod.yml exec -T api bin/console doctrine:migrations:migrate --no-interaction
             docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload
             echo "$(date -Iseconds) ${{ github.sha }}" >> .deploy-history

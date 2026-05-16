@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { MonitoringToggle } from "@/app/components/MonitoringToggle";
+import { getMonitoringStatus } from "@/lib/monitoring";
 
 const tools = [
   {
@@ -9,7 +12,28 @@ const tools = [
   },
 ];
 
-export default function HomePage() {
+function decodeJwtRoles(token: string): string[] {
+  try {
+    const payload = JSON.parse(
+      Buffer.from(token.split(".")[1], "base64url").toString(),
+    );
+    return Array.isArray(payload.roles) ? payload.roles : [];
+  } catch {
+    return [];
+  }
+}
+
+export default async function HomePage() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("BEARER")?.value;
+  const isAdmin = token
+    ? decodeJwtRoles(token).includes("ROLE_ADMIN")
+    : false;
+
+  const monitoringStatus = isAdmin
+    ? await getMonitoringStatus(token!).catch(() => null)
+    : null;
+
   return (
     <main className="mx-auto w-full max-w-3xl space-y-10 p-4 sm:p-8">
       <section>
@@ -34,6 +58,12 @@ export default function HomePage() {
           ))}
         </ul>
       </section>
+
+      {monitoringStatus && (
+        <section>
+          <MonitoringToggle initial={monitoringStatus} />
+        </section>
+      )}
     </main>
   );
 }

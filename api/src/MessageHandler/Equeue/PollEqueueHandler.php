@@ -11,6 +11,7 @@ use App\Message\Equeue\BroadcastTelegramMessage;
 use App\Message\Equeue\PollEqueueMessage;
 use App\Repository\Equeue\EqueueRawHtmlRepository;
 use App\Repository\Equeue\EqueueSnapshotRepository;
+use App\Repository\MonitoringConfigRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Lock\LockFactory;
@@ -28,11 +29,18 @@ final class PollEqueueHandler
         private readonly LockFactory $lockFactory,
         private readonly EqueueSnapshotRepository $snapshotRepository,
         private readonly LoggerInterface $logger,
+        private readonly MonitoringConfigRepositoryInterface $monitoringConfigRepository,
     ) {
     }
 
     public function __invoke(PollEqueueMessage $message): void
     {
+        if (!$this->monitoringConfigRepository->isEnabled()) {
+            $this->logger->info('equeue polling disabled, skipping');
+
+            return;
+        }
+
         $lock = $this->lockFactory->createLock('equeue.poll', ttl: 120.0, autoRelease: true);
         if (!$lock->acquire()) {
             $this->logger->info('e-queue poll skipped: another worker holds the lock');
