@@ -8,7 +8,6 @@ use App\Entity\Equeue\EqueueRawHtml;
 use App\Entity\Equeue\EqueueSnapshot;
 use App\Equeue\Fetcher\EqueueFetcherInterface;
 use App\Equeue\Fetcher\EqueueRawResponse;
-use App\Message\Equeue\BroadcastTelegramMessage;
 use App\Message\Equeue\PollEqueueMessage;
 use App\MessageHandler\Equeue\PollEqueueHandler;
 use App\Repository\Equeue\EqueueRawHtmlRepository;
