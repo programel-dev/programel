@@ -1,0 +1,38 @@
+services:
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    environment:
+      LOG_LEVEL: info
+      TZ: Europe/Kyiv
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8191/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  worker:
+    image: ghcr.io/programel-dev/programel/api:latest
+    command: php bin/console messenger:consume async scheduler_default --memory-limit=128M --time-limit=3600
+    env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      flaresolverr:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - jwt_keys:/app/config/jwt:ro
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 300 --cleanup --label-enable
+    restart: unless-stopped
+
+volumes:
+  jwt_keys:
