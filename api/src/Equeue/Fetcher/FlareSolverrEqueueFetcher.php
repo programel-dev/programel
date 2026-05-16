@@ -21,6 +21,18 @@ final class FlareSolverrEqueueFetcher implements EqueueFetcherInterface
     {
         $fetchedAt = new \DateTimeImmutable();
 
+        $result = $this->attemptFetch($fetchedAt);
+
+        if (!$result->isSuccess()) {
+            $this->logger->info('flaresolverr fetch failed, retrying once');
+            $result = $this->attemptFetch($fetchedAt);
+        }
+
+        return $result;
+    }
+
+    private function attemptFetch(\DateTimeImmutable $fetchedAt): EqueueRawResponse
+    {
         try {
             $response = $this->httpClient->request('POST', $this->flaresolverrUrl, [
                 'json' => [

@@ -66,16 +66,13 @@ final class PollEqueueHandler
                 ));
                 $this->entityManager->flush();
 
-                if (null === $previous || EqueueSnapshot::STATUS_HTTP_ERROR !== $previous->getStatus()) {
-                    $this->messageBus->dispatch(new BroadcastTelegramMessage('🚨 Щось бляха, пішло не в ту дірку'));
-                }
-
                 return;
             }
 
             $alertPresent = str_contains($response->body, 'Наразі всі місця зайняті');
 
             $this->rawHtmlRepository->deleteOlderThan(new \DateTimeImmutable('-8 hours'));
+            $this->snapshotRepository->deleteOlderThan(new \DateTimeImmutable('-30 days'));
             $this->entityManager->persist(new EqueueRawHtml($response->fetchedAt, $alertPresent, $response->body));
             $this->entityManager->persist(new EqueueSnapshot(
                 $response->fetchedAt,

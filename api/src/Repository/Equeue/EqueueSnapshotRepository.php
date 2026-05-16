@@ -18,6 +18,16 @@ class EqueueSnapshotRepository extends ServiceEntityRepository
         parent::__construct($registry, EqueueSnapshot::class);
     }
 
+    public function deleteOlderThan(\DateTimeImmutable $cutoff): void
+    {
+        $this->createQueryBuilder('s')
+            ->delete()
+            ->where('s.fetchedAt < :cutoff')
+            ->setParameter('cutoff', $cutoff)
+            ->getQuery()
+            ->execute();
+    }
+
     public function findLatest(): ?EqueueSnapshot
     {
         return $this->createQueryBuilder('s')
