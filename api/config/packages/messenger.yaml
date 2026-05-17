@@ -4,7 +4,7 @@ framework:
 
         transports:
             async:
-                dsn: '%env(REDIS_URL)%/messages'
+                dsn: '%env(REDIS_URL)%/messages?read_timeout=5'
                 retry_strategy:
                     max_retries: 3
                     delay: 1000
