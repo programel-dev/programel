@@ -1,7 +1,9 @@
 services:
   playwright-equeue:
-    build: docker/playwright/
+    image: ghcr.io/programel-dev/programel/playwright-equeue:latest
     restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
 
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:latest

@@ -1,0 +1,7 @@
+# Copy this file to docker-compose.override.yml for local playwright-equeue debugging.
+# docker-compose.override.yml is NOT committed — see .gitignore.
+# On Mac mini this file should NOT exist (it always uses the GHCR image).
+services:
+  playwright-equeue:
+    build: docker/playwright/
+    image: programel/playwright-equeue:local

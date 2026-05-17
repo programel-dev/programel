@@ -10,6 +10,7 @@ env:
   REGISTRY: ghcr.io
   API_IMAGE: ghcr.io/${{ github.repository }}/api
   FRONTEND_IMAGE: ghcr.io/${{ github.repository }}/frontend
+  PLAYWRIGHT_IMAGE: ghcr.io/${{ github.repository }}/playwright-equeue
 
 jobs:
   lint:
@@ -200,6 +201,15 @@ jobs:
           tags: |
             ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
             ${{ env.FRONTEND_IMAGE }}:latest
+
+      - name: Build and push playwright-equeue image
+        uses: docker/build-push-action@v5
+        with:
+          context: docker/playwright
+          push: true
+          tags: |
+            ${{ env.PLAYWRIGHT_IMAGE }}:${{ github.sha }}
+            ${{ env.PLAYWRIGHT_IMAGE }}:latest
 
   deploy:
     runs-on: ubuntu-latest
