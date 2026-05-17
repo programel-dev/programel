@@ -28,3 +28,6 @@ api/config/jwt/*.pem
 
 # OpenSpec
 openspec/changes
+
+# Local docker compose overrides
+docker-compose.override.yml
