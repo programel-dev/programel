@@ -69,7 +69,7 @@ final class PollEqueueHandler
                 return;
             }
 
-            $alertPresent = str_contains($response->body, 'Наразі всі місця зайняті');
+            [$alertPresent, $slots, $parserVersion] = $this->parseResponse($response->body);
 
             $this->rawHtmlRepository->deleteOlderThan(new \DateTimeImmutable('-8 hours'));
             $this->snapshotRepository->deleteOlderThan(new \DateTimeImmutable('-30 days'));
@@ -78,9 +78,9 @@ final class PollEqueueHandler
                 $response->fetchedAt,
                 EqueueSnapshot::STATUS_OK,
                 $response->statusCode,
-                ['alertPresent' => $alertPresent],
+                ['alertPresent' => $alertPresent, 'slots' => $slots],
                 0,
-                'cloudflare-bypass-v1',
+                $parserVersion,
             ));
             $this->entityManager->flush();
 
@@ -88,13 +88,51 @@ final class PollEqueueHandler
                 $previousAlertPresent = $previous?->getPayload()['alertPresent'] ?? null;
                 if (false !== $previousAlertPresent) {
                     $this->logger->info('e-queue alert absent — state transition, broadcasting');
-                    $this->messageBus->dispatch(new BroadcastTelegramMessage(
-                        "⚡️ Вейкап Нео, стан змінився!\nhttps://munich.pasport.org.ua/solutions/e-queue"
-                    ));
+                    $text = !empty($slots)
+                        ? $this->formatSlotMessage($slots)
+                        : "⚡️ Вейкап Нео, стан змінився!\nhttps://munich.pasport.org.ua/solutions/e-queue";
+                    $this->messageBus->dispatch(new BroadcastTelegramMessage($text));
                 }
             }
         } finally {
             $lock->release();
         }
+    }
+
+    /**
+     * @return array{bool, list<array{date: string, times: list<string>}>, string}
+     */
+    private function parseResponse(string $body): array
+    {
+        $data = json_decode($body, true);
+        if (is_array($data) && array_key_exists('slots', $data)) {
+            $slots = $data['slots'] ?? [];
+
+            return [empty($slots), $slots, 'playwright-slot-v1'];
+        }
+
+        return [str_contains($body, 'Наразі всі місця зайняті'), [], 'cloudflare-bypass-v1'];
+    }
+
+    private const MONTHS_UA = [
+        1 => 'січня', 2 => 'лютого', 3 => 'березня', 4 => 'квітня',
+        5 => 'травня', 6 => 'червня', 7 => 'липня', 8 => 'серпня',
+        9 => 'вересня', 10 => 'жовтня', 11 => 'листопада', 12 => 'грудня',
+    ];
+
+    /** @param list<array{date: string, times: list<string>}> $slots */
+    private function formatSlotMessage(array $slots): string
+    {
+        $lines = [];
+        foreach ($slots as $slot) {
+            $dt = new \DateTimeImmutable($slot['date']);
+            $day = $dt->format('j');
+            $month = self::MONTHS_UA[(int) $dt->format('n')];
+            $lines[] = "{$day} {$month}: ".implode(', ', $slot['times']);
+        }
+
+        return "🗓 Є вільні місця в черзі!\n\n"
+            .implode("\n", $lines)
+            ."\n\n👉 https://munich.pasport.org.ua/solutions/e-queue";
     }
 }

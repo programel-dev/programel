@@ -196,6 +196,45 @@ final class PollEqueueHandlerTest extends TestCase
         self::assertCount(0, $dispatched);
     }
 
+    // --- Playwright JSON mode ---
+
+    public function testPlaywrightWithSlotsBroadcastsSlotDetails(): void
+    {
+        $slots = [
+            ['date' => '2026-05-25', 'times' => ['09:00', '10:30']],
+            ['date' => '2026-05-26', 'times' => ['11:00']],
+        ];
+        $body = (string) json_encode(['success' => true, 'slots' => $slots, 'fetchedAt' => '2026-05-17T12:00:00Z']);
+        $response = new EqueueRawResponse(200, $body, 'application/json', new \DateTimeImmutable());
+
+        [$persisted, $dispatched] = $this->invoke(response: $response, previousSnapshot: null);
+
+        $snap = array_values(array_filter($persisted, fn ($e) => $e instanceof EqueueSnapshot))[0];
+        self::assertSame('playwright-slot-v1', $snap->getParserVersion());
+        self::assertFalse($snap->getPayload()['alertPresent']);
+        self::assertSame($slots, $snap->getPayload()['slots']);
+
+        self::assertCount(1, $dispatched);
+        self::assertStringContainsString('25 травня: 09:00, 10:30', $dispatched[0]->text);
+        self::assertStringContainsString('26 травня: 11:00', $dispatched[0]->text);
+        self::assertStringContainsString('pasport.org.ua', $dispatched[0]->text);
+    }
+
+    public function testPlaywrightEmptySlotsAlertPresent(): void
+    {
+        $body = (string) json_encode(['success' => true, 'slots' => [], 'fetchedAt' => '2026-05-17T12:00:00Z']);
+        $response = new EqueueRawResponse(200, $body, 'application/json', new \DateTimeImmutable());
+
+        [$persisted, $dispatched] = $this->invoke(response: $response, previousSnapshot: null);
+
+        $snap = array_values(array_filter($persisted, fn ($e) => $e instanceof EqueueSnapshot))[0];
+        self::assertSame('playwright-slot-v1', $snap->getParserVersion());
+        self::assertTrue($snap->getPayload()['alertPresent']);
+        self::assertSame([], $snap->getPayload()['slots']);
+
+        self::assertCount(0, $dispatched);
+    }
+
     // --- Helpers ---
 
     /**
