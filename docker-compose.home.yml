@@ -1,4 +1,8 @@
 services:
+  playwright-equeue:
+    build: docker/playwright/
+    restart: unless-stopped
+
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:latest
     environment:
@@ -16,11 +20,15 @@ services:
     image: ghcr.io/programel-dev/programel/api:latest
     command: php bin/console messenger:consume async scheduler_default --memory-limit=128M --time-limit=3600
     env_file: .env
+    environment:
+      PLAYWRIGHT_EQUEUE_URL: http://playwright-equeue:3001
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       flaresolverr:
         condition: service_healthy
+      playwright-equeue:
+        condition: service_started
     restart: unless-stopped
     volumes:
       - jwt_keys:/app/config/jwt:ro

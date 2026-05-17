@@ -4,6 +4,7 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    env(PLAYWRIGHT_EQUEUE_URL): ''
 
 services:
     # default configuration for services in *this* file
@@ -27,3 +28,9 @@ services:
         arguments:
             $flaresolverrUrl: '%env(FLARESOLVERR_URL)%'
             $targetUrl: '%env(EQUEUE_TARGET_URL)%'
+
+    App\Equeue\Fetcher\PlaywrightEqueueFetcher:
+        arguments:
+            $playwrightUrl: '%env(PLAYWRIGHT_EQUEUE_URL)%'
+
+    App\Equeue\Fetcher\EqueueFetcherInterface: '@App\Equeue\Fetcher\PlaywrightEqueueFetcher'
