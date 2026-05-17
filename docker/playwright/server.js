@@ -1,7 +1,9 @@
 'use strict';
 
 const express = require('express');
-const { chromium } = require('playwright');
+const { chromium } = require('playwright-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+chromium.use(StealthPlugin());
 
 const app = express();
 const PORT = 3001;
@@ -33,26 +35,33 @@ app.get('/slots', async (_req, res) => {
         });
 
         try {
-            await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: FULL_TIMEOUT_MS });
-        } catch {
-            return res.json({ success: false, reason: 'timeout', fetchedAt });
+            await page.goto(TARGET_URL, { waitUntil: 'networkidle', timeout: FULL_TIMEOUT_MS });
+        } catch (e) {
+            if (!String(e?.message).includes('networkidle')) {
+                return res.json({ success: false, reason: 'timeout', fetchedAt });
+            }
+            // networkidle timeout is acceptable — page may still be interactive
         }
 
-        // Detect block page (Cloudflare challenge or similar)
-        const pageContent = await page.content();
-        if (!pageContent.includes('service') || pageContent.includes('cf-browser-verification')) {
-            return res.json({ success: false, reason: 'blocked', fetchedAt });
+        // If "no slots" alert is present, the form is not rendered at all
+        const noSlotsAlert = await page.locator('text=Наразі всі місця зайняті').count();
+        if (noSlotsAlert > 0) {
+            return res.json({ success: true, slots: [], fetchedAt });
         }
 
+        // Slots may be available — look for the service select
+        const serviceSelectLocator = page.locator('select').first();
         try {
-            await page.waitForSelector('select[name="service"]', { timeout: 10_000 });
+            await serviceSelectLocator.waitFor({ timeout: 15_000 });
         } catch {
+            const title = await page.title();
+            console.error('service select not found. title=%s', title);
             return res.json({ success: false, reason: 'blocked', fetchedAt });
         }
 
         // Select service=4 and wait for getDays AJAX response
         const daysPromise = captureResponse(apiResponses, isDaysResponse, FULL_TIMEOUT_MS);
-        await page.selectOption('select[name="service"]', '4');
+        await serviceSelectLocator.selectOption('4');
         const daysBody = await daysPromise;
 
         if (daysBody === null) {
@@ -72,7 +81,7 @@ app.get('/slots', async (_req, res) => {
 
             const clicked = await trySelectDate(page, date);
             if (!clicked) {
-                await timesPromise; // drain the promise
+                await timesPromise;
                 continue;
             }
 
@@ -95,7 +104,7 @@ app.get('/slots', async (_req, res) => {
     }
 });
 
-/** Polls array for a matching entry until timeout, returns matched body or null */
+/** Polls list for a matching entry until timeout, returns body or null */
 function captureResponse(list, matcher, timeoutMs) {
     return new Promise((resolve) => {
         const deadline = Date.now() + timeoutMs;
