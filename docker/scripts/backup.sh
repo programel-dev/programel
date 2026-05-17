@@ -8,7 +8,7 @@ BACKUP_FILE="${BACKUP_DIR}/programel_${TIMESTAMP}.sql.gz"
 
 echo "[$(date -Iseconds)] Starting backup..."
 
-docker compose -f /opt/programel/docker-compose.prod.yml exec -T postgres \
+docker compose -f /var/www/programel/docker-compose.prod.yml exec -T postgres \
     pg_dump -U "${POSTGRES_USER:-programel}" "${POSTGRES_DB:-programel}" \
     | gzip > "${BACKUP_FILE}"
 

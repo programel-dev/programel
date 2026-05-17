@@ -21,8 +21,8 @@ chmod 700 /home/deploy/.ssh
 chmod 600 /home/deploy/.ssh/authorized_keys
 
 # Create project directory
-mkdir -p /opt/programel /backups
-chown deploy:deploy /opt/programel /backups
+mkdir -p /var/www/programel /backups
+chown deploy:deploy /var/www/programel /backups
 
 # Configure UFW
 ufw default deny incoming
@@ -40,5 +40,5 @@ echo "=== Setup complete ==="
 echo "Next steps:"
 echo "  1. Configure DNS A-records for all domains → $(curl -s ifconfig.me)"
 echo "  2. Run: certbot certonly --standalone -d programel.com -d test.programel.com -d lebenslauf.programel.com -d olcha.programel.com"
-echo "  3. Copy docker-compose.prod.yml and .env to /opt/programel/"
+echo "  3. Copy docker-compose.prod.yml and .env to /var/www/programel/"
 echo "  4. Run: docker compose -f docker-compose.prod.yml up -d"
