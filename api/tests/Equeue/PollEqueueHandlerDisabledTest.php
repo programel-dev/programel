@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Equeue;
 
-use App\Equeue\Fetcher\EqueueFetcherInterface;
-use App\Message\Equeue\PollEqueueMessage;
-use App\MessageHandler\Equeue\PollEqueueHandler;
-use App\Repository\Equeue\EqueueRawHtmlRepository;
-use App\Repository\Equeue\EqueueSnapshotRepository;
-use App\Repository\Equeue\EqueueWatchRepository;
-use App\Repository\MonitoringConfigRepositoryInterface;
+use App\DocumentCenter\Application\PollDocumentCenter\PollDocumentCenterHandler;
+use App\DocumentCenter\Application\PollDocumentCenter\PollDocumentCenterMessage;
+use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterRawHtmlRepository;
+use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterSnapshotRepository;
+use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterWatchRepository;
+use App\DocumentCenter\Infrastructure\Fetcher\DocumentCenterFetcherInterface;
+use App\Monitoring\Infrastructure\MonitoringConfigRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -24,24 +24,24 @@ final class PollEqueueHandlerDisabledTest extends TestCase
         $monitoring = $this->createMock(MonitoringConfigRepositoryInterface::class);
         $monitoring->method('isEnabled')->willReturn(false);
 
-        $fetcher = $this->createMock(EqueueFetcherInterface::class);
+        $fetcher = $this->createMock(DocumentCenterFetcherInterface::class);
         $fetcher->expects($this->never())->method('fetch');
 
         $lockFactory = $this->createMock(LockFactory::class);
         $lockFactory->expects($this->never())->method('createLock');
 
-        $handler = new PollEqueueHandler(
+        $handler = new PollDocumentCenterHandler(
             fetcher: $fetcher,
-            rawHtmlRepository: $this->createMock(EqueueRawHtmlRepository::class),
+            rawHtmlRepository: $this->createMock(DocumentCenterRawHtmlRepository::class),
             entityManager: $this->createMock(EntityManagerInterface::class),
             messageBus: $this->createMock(MessageBusInterface::class),
             lockFactory: $lockFactory,
-            snapshotRepository: $this->createMock(EqueueSnapshotRepository::class),
-            watchRepository: $this->createMock(EqueueWatchRepository::class),
+            snapshotRepository: $this->createMock(DocumentCenterSnapshotRepository::class),
+            watchRepository: $this->createMock(DocumentCenterWatchRepository::class),
             logger: $this->createMock(LoggerInterface::class),
             monitoringConfigRepository: $monitoring,
         );
 
-        $handler(new PollEqueueMessage());
+        $handler(new PollDocumentCenterMessage());
     }
 }

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Repository;
+namespace App\Monitoring\Infrastructure;
 
-use App\Entity\MonitoringConfig;
+use App\Monitoring\Domain\MonitoringConfig;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Equeue\Fetcher;
+namespace App\DocumentCenter\Infrastructure\Fetcher;
 
-interface EqueueFetcherInterface
+interface DocumentCenterFetcherInterface
 {
-    public function fetch(): EqueueRawResponse;
+    public function fetch(): DocumentCenterRawResponse;
 }

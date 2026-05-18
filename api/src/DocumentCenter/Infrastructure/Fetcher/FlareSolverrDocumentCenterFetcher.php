@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Equeue\Fetcher;
+namespace App\DocumentCenter\Infrastructure\Fetcher;
 
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-final class FlareSolverrEqueueFetcher implements EqueueFetcherInterface
+final class FlareSolverrDocumentCenterFetcher implements DocumentCenterFetcherInterface
 {
     public function __construct(
         private readonly HttpClientInterface $httpClient,
@@ -17,7 +17,7 @@ final class FlareSolverrEqueueFetcher implements EqueueFetcherInterface
     ) {
     }
 
-    public function fetch(): EqueueRawResponse
+    public function fetch(): DocumentCenterRawResponse
     {
         $fetchedAt = new \DateTimeImmutable();
 
@@ -31,7 +31,7 @@ final class FlareSolverrEqueueFetcher implements EqueueFetcherInterface
         return $result;
     }
 
-    private function attemptFetch(\DateTimeImmutable $fetchedAt): EqueueRawResponse
+    private function attemptFetch(\DateTimeImmutable $fetchedAt): DocumentCenterRawResponse
     {
         try {
             $response = $this->httpClient->request('POST', $this->flaresolverrUrl, [
@@ -47,7 +47,7 @@ final class FlareSolverrEqueueFetcher implements EqueueFetcherInterface
         } catch (\Throwable $e) {
             $this->logger->error('flaresolverr request failed', ['exception' => $e->getMessage()]);
 
-            return new EqueueRawResponse(0, '', '', $fetchedAt);
+            return new DocumentCenterRawResponse(0, '', '', $fetchedAt);
         }
 
         if (($data['status'] ?? '') !== 'ok') {
@@ -56,7 +56,7 @@ final class FlareSolverrEqueueFetcher implements EqueueFetcherInterface
                 'message' => $data['message'] ?? '',
             ]);
 
-            return new EqueueRawResponse(0, '', '', $fetchedAt);
+            return new DocumentCenterRawResponse(0, '', '', $fetchedAt);
         }
 
         $httpStatus = (int) ($data['solution']['status'] ?? 0);
@@ -64,7 +64,7 @@ final class FlareSolverrEqueueFetcher implements EqueueFetcherInterface
         if ($httpStatus < 200 || $httpStatus >= 300) {
             $this->logger->warning('e-queue page returned non-2xx via flaresolverr', ['status' => $httpStatus]);
 
-            return new EqueueRawResponse($httpStatus, '', '', $fetchedAt);
+            return new DocumentCenterRawResponse($httpStatus, '', '', $fetchedAt);
         }
 
         $body = $data['solution']['response'] ?? '';
@@ -75,9 +75,9 @@ final class FlareSolverrEqueueFetcher implements EqueueFetcherInterface
                 'preview' => substr($body, 0, 200),
             ]);
 
-            return new EqueueRawResponse(0, '', '', $fetchedAt);
+            return new DocumentCenterRawResponse(0, '', '', $fetchedAt);
         }
 
-        return new EqueueRawResponse($httpStatus, $body, 'text/html', $fetchedAt);
+        return new DocumentCenterRawResponse($httpStatus, $body, 'text/html', $fetchedAt);
     }
 }

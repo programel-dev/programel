@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace App\Entity\Equeue;
+namespace App\DocumentCenter\Domain;
 
-use App\Repository\Equeue\EqueueNotificationRepository;
+use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterNotificationRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: EqueueNotificationRepository::class)]
-#[ORM\Table(name: 'equeue_notification')]
+#[ORM\Entity(repositoryClass: DocumentCenterNotificationRepository::class)]
+#[ORM\Table(name: 'notification', schema: 'document_center')]
 #[ORM\UniqueConstraint(name: 'uniq_equeue_notification_watch_slot', columns: ['watch_id', 'slot_signature'])]
-class EqueueNotification
+class DocumentCenterNotification
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(targetEntity: EqueueWatch::class)]
+    #[ORM\ManyToOne(targetEntity: DocumentCenterWatch::class)]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-    private EqueueWatch $watch;
+    private DocumentCenterWatch $watch;
 
     #[ORM\Column(length: 64)]
     private string $slotSignature;
@@ -31,7 +31,7 @@ class EqueueNotification
     #[ORM\Column(type: Types::BIGINT, nullable: true)]
     private ?string $telegramMessageId = null;
 
-    public function __construct(EqueueWatch $watch, string $slotSignature)
+    public function __construct(DocumentCenterWatch $watch, string $slotSignature)
     {
         $this->watch = $watch;
         $this->slotSignature = $slotSignature;
@@ -43,7 +43,7 @@ class EqueueNotification
         return $this->id;
     }
 
-    public function getWatch(): EqueueWatch
+    public function getWatch(): DocumentCenterWatch
     {
         return $this->watch;
     }

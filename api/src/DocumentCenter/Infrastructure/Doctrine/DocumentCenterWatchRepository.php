@@ -2,29 +2,29 @@
 
 declare(strict_types=1);
 
-namespace App\Repository\Equeue;
+namespace App\DocumentCenter\Infrastructure\Doctrine;
 
-use App\Entity\Equeue\EqueueWatch;
-use App\Entity\User;
+use App\DocumentCenter\Domain\DocumentCenterWatch;
+use App\User\Domain\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<EqueueWatch>
+ * @extends ServiceEntityRepository<DocumentCenterWatch>
  */
-class EqueueWatchRepository extends ServiceEntityRepository
+class DocumentCenterWatchRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, EqueueWatch::class);
+        parent::__construct($registry, DocumentCenterWatch::class);
     }
 
     /**
-     * @return list<EqueueWatch>
+     * @return list<DocumentCenterWatch>
      */
     public function findAllActive(): array
     {
-        /** @var list<EqueueWatch> $result */
+        /** @var list<DocumentCenterWatch> $result */
         $result = $this->createQueryBuilder('w')
             ->andWhere('w.active = :active')
             ->setParameter('active', true)
@@ -35,11 +35,11 @@ class EqueueWatchRepository extends ServiceEntityRepository
     }
 
     /**
-     * @return list<EqueueWatch>
+     * @return list<DocumentCenterWatch>
      */
     public function findActiveForUser(User $user): array
     {
-        /** @var list<EqueueWatch> $result */
+        /** @var list<DocumentCenterWatch> $result */
         $result = $this->createQueryBuilder('w')
             ->andWhere('w.user = :user')
             ->andWhere('w.active = :active')

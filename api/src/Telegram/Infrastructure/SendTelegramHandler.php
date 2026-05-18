@@ -2,13 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\MessageHandler\Telegram;
+namespace App\Telegram\Infrastructure;
 
-use App\Message\Telegram\SendTelegramMessage;
-use App\Repository\Equeue\EqueueNotificationRepository;
-use App\Repository\Telegram\TelegramAccountRepository;
-use App\Telegram\TelegramApiException;
-use App\Telegram\TelegramClient;
+use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterNotificationRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -20,7 +16,7 @@ final class SendTelegramHandler
     public function __construct(
         private readonly TelegramClient $telegramClient,
         private readonly TelegramAccountRepository $telegramAccountRepository,
-        private readonly EqueueNotificationRepository $notificationRepository,
+        private readonly DocumentCenterNotificationRepository $notificationRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly LoggerInterface $logger,
     ) {

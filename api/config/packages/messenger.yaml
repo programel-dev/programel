@@ -14,7 +14,8 @@ framework:
                 dsn: '%env(REDIS_URL)%/messages_failed'
 
         routing:
-            'App\Message\*': async
+            'App\DocumentCenter\Application\*': async
+            'App\Telegram\Infrastructure\SendTelegramMessage': async
 
 when@test:
     framework:

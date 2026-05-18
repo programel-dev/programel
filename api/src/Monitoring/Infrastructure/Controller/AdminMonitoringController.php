@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Controller\Admin;
+namespace App\Monitoring\Infrastructure\Controller;
 
-use App\Entity\User;
-use App\Repository\MonitoringConfigRepositoryInterface;
+use App\Monitoring\Infrastructure\MonitoringConfigRepositoryInterface;
+use App\User\Domain\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;

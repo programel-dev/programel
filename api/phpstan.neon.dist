@@ -6,4 +6,4 @@ parameters:
         # Doctrine entity identifier pattern — int is populated by the ORM via reflection
         -
             identifier: property.unusedType
-            message: '#Property App\\Entity\\.*::\$id \(int\|null\) is never assigned int#'
+            message: '#Property App\\.*::\$id \(int\|null\) is never assigned int#'

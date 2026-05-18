@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-namespace App\Message\Equeue;
+namespace App\DocumentCenter\Application\PollDocumentCenter;
 
-final readonly class PollEqueueMessage
+final readonly class PollDocumentCenterMessage
 {
 }

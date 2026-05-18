@@ -1,7 +1,7 @@
 .PHONY: dev prod staging stop logs test behat lint build deploy backup rollback certs help
 
-SERVER_USER ?= root
-SERVER_HOST ?= droplet-programel
+SERVER_USER ?= deploy
+SERVER_HOST ?= hetzner-programel
 
 COMPOSE_DEV = docker compose -f docker-compose.dev.yml
 COMPOSE_PROD = docker compose -f docker-compose.prod.yml
@@ -71,9 +71,9 @@ push: ## Push images to registry
 	docker buildx build --platform linux/amd64 --target prod -t $(DOCKER_REGISTRY)/frontend:$(IMAGE_TAG) -f docker/frontend/Dockerfile --push .
 
 deploy: ## Deploy to production server
-	rsync -az docker-compose.prod.yml docker/nginx $(SERVER_USER)@$(SERVER_HOST):/opt/programel/
+	rsync -az docker-compose.prod.yml docker/nginx $(SERVER_USER)@$(SERVER_HOST):/var/www/programel/
 	ssh $(SERVER_USER)@$(SERVER_HOST) '\
-		cd /opt/programel && \
+		cd /var/www/programel && \
 		chmod 644 api/config/jwt/private.pem 2>/dev/null || true && \
 		docker compose -f docker-compose.prod.yml pull && \
 		docker compose -f docker-compose.prod.yml exec api bin/console doctrine:migrations:migrate --no-interaction && \
@@ -85,13 +85,13 @@ deploy: ## Deploy to production server
 rollback: ## Rollback to previous version (usage: make rollback or make rollback TAG=abc123)
 ifdef TAG
 	ssh $(SERVER_USER)@$(SERVER_HOST) '\
-		cd /opt/programel && \
+		cd /var/www/programel && \
 		IMAGE_TAG=$(TAG) docker compose -f docker-compose.prod.yml pull && \
 		IMAGE_TAG=$(TAG) docker compose -f docker-compose.prod.yml up -d \
 	'
 else
 	ssh $(SERVER_USER)@$(SERVER_HOST) '\
-		cd /opt/programel && \
+		cd /var/www/programel && \
 		PREV_TAG=$$(tail -2 .deploy-history | head -1 | awk "{print \$$2}") && \
 		IMAGE_TAG=$$PREV_TAG docker compose -f docker-compose.prod.yml pull && \
 		IMAGE_TAG=$$PREV_TAG docker compose -f docker-compose.prod.yml up -d \
@@ -101,7 +101,7 @@ endif
 # --- Operations ---
 
 backup: ## Run database backup
-	ssh $(SERVER_USER)@$(SERVER_HOST) '/opt/programel/docker/scripts/backup.sh'
+	ssh $(SERVER_USER)@$(SERVER_HOST) '/var/www/programel/docker/scripts/backup.sh'
 
 certs: ## Generate local SSL certificates via mkcert
 	mkcert -install

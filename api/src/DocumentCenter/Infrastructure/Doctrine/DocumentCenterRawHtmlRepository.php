@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Repository\Equeue;
+namespace App\DocumentCenter\Infrastructure\Doctrine;
 
-use App\Entity\Equeue\EqueueRawHtml;
+use App\DocumentCenter\Domain\DocumentCenterRawHtml;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<EqueueRawHtml>
+ * @extends ServiceEntityRepository<DocumentCenterRawHtml>
  */
-class EqueueRawHtmlRepository extends ServiceEntityRepository
+class DocumentCenterRawHtmlRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, EqueueRawHtml::class);
+        parent::__construct($registry, DocumentCenterRawHtml::class);
     }
 
     public function deleteOlderThan(\DateTimeImmutable $cutoff): void

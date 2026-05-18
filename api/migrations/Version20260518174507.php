@@ -68,7 +68,7 @@ final class Version20260518174507 extends AbstractMigration
         // Rename indexes to match new Doctrine-generated names
         $this->addSql('ALTER INDEX "user".uniq_1483a5e9e7927c74 RENAME TO uniq_33a053ffe7927c74');
         $this->addSql('ALTER INDEX "user".uniq_9bace7e1c74f2195 RENAME TO uniq_5ea1def6c74f2195');
-        $this->addSql('ALTER INDEX telegram.uniq_26703752a76ed395 RENAME TO uniq_468aa65ca76ed395');
+        $this->addSql('ALTER INDEX telegram.uniq_telegram_account_user RENAME TO uniq_468aa65ca76ed395');
         $this->addSql('ALTER INDEX monitoring.idx_monitoring_config_updated_by RENAME TO idx_8dabdc8a896dbbde');
 
         // Create FK indexes that did not exist on old tables
@@ -97,7 +97,7 @@ final class Version20260518174507 extends AbstractMigration
         // Rename indexes back to old names
         $this->addSql('ALTER INDEX "user".uniq_33a053ffe7927c74 RENAME TO uniq_1483a5e9e7927c74');
         $this->addSql('ALTER INDEX "user".uniq_5ea1def6c74f2195 RENAME TO uniq_9bace7e1c74f2195');
-        $this->addSql('ALTER INDEX telegram.uniq_468aa65ca76ed395 RENAME TO uniq_26703752a76ed395');
+        $this->addSql('ALTER INDEX telegram.uniq_468aa65ca76ed395 RENAME TO uniq_telegram_account_user');
         $this->addSql('ALTER INDEX monitoring.idx_8dabdc8a896dbbde RENAME TO idx_monitoring_config_updated_by');
 
         // Restore boolean default and Doctrine 2 type comment

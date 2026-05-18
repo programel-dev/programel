@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Entity\Equeue;
+namespace App\DocumentCenter\Domain;
 
-use App\Repository\Equeue\EqueueRawHtmlRepository;
+use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterRawHtmlRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: EqueueRawHtmlRepository::class)]
-#[ORM\Table(name: 'equeue_raw_html')]
+#[ORM\Entity(repositoryClass: DocumentCenterRawHtmlRepository::class)]
+#[ORM\Table(name: 'raw_html', schema: 'document_center')]
 #[ORM\Index(name: 'idx_equeue_raw_html_fetched_at', columns: ['fetched_at'])]
-class EqueueRawHtml
+class DocumentCenterRawHtml
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

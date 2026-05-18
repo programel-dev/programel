@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Equeue\Fetcher;
+namespace App\DocumentCenter\Infrastructure\Fetcher;
 
-final readonly class EqueueRawResponse
+final readonly class DocumentCenterRawResponse
 {
     public function __construct(
         public int $statusCode,

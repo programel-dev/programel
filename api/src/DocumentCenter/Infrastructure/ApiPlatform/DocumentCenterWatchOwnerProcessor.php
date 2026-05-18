@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\State;
+namespace App\DocumentCenter\Infrastructure\ApiPlatform;
 
 use ApiPlatform\Doctrine\Common\State\PersistProcessor;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
-use App\Entity\Equeue\EqueueWatch;
-use App\Entity\User;
+use App\DocumentCenter\Domain\DocumentCenterWatch;
+use App\User\Domain\User;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 /**
- * @implements ProcessorInterface<EqueueWatch, EqueueWatch>
+ * @implements ProcessorInterface<DocumentCenterWatch, DocumentCenterWatch>
  */
-final class EqueueWatchOwnerProcessor implements ProcessorInterface
+final class DocumentCenterWatchOwnerProcessor implements ProcessorInterface
 {
     public function __construct(
         private readonly Security $security,

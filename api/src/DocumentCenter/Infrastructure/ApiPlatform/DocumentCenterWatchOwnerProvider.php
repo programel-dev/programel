@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace App\State;
+namespace App\DocumentCenter\Infrastructure\ApiPlatform;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
-use App\Entity\Equeue\EqueueWatch;
-use App\Entity\User;
-use App\Repository\Equeue\EqueueWatchRepository;
+use App\DocumentCenter\Domain\DocumentCenterWatch;
+use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterWatchRepository;
+use App\User\Domain\User;
 use Symfony\Bundle\SecurityBundle\Security;
 
 /**
- * @implements ProviderInterface<EqueueWatch>
+ * @implements ProviderInterface<DocumentCenterWatch>
  */
-final class EqueueWatchOwnerProvider implements ProviderInterface
+final class DocumentCenterWatchOwnerProvider implements ProviderInterface
 {
     public function __construct(
         private readonly Security $security,
-        private readonly EqueueWatchRepository $watchRepository,
+        private readonly DocumentCenterWatchRepository $watchRepository,
     ) {
     }
 

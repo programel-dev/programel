@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Entity\Equeue;
+namespace App\DocumentCenter\Domain;
 
-use App\Repository\Equeue\EqueueSnapshotRepository;
+use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterSnapshotRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: EqueueSnapshotRepository::class)]
-#[ORM\Table(name: 'equeue_snapshot')]
+#[ORM\Entity(repositoryClass: DocumentCenterSnapshotRepository::class)]
+#[ORM\Table(name: 'snapshot', schema: 'document_center')]
 #[ORM\Index(name: 'idx_equeue_snapshot_fetched_at', columns: ['fetched_at'])]
-class EqueueSnapshot
+class DocumentCenterSnapshot
 {
     public const STATUS_OK = 'ok';
     public const STATUS_HTTP_ERROR = 'http_error';

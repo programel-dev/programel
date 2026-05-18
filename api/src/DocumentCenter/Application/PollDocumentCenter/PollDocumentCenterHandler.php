@@ -2,18 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\MessageHandler\Equeue;
+namespace App\DocumentCenter\Application\PollDocumentCenter;
 
-use App\Entity\Equeue\EqueueRawHtml;
-use App\Entity\Equeue\EqueueSnapshot;
-use App\Equeue\Fetcher\EqueueFetcherInterface;
-use App\Message\Equeue\BroadcastTelegramMessage;
-use App\Message\Equeue\EvaluateWatchMessage;
-use App\Message\Equeue\PollEqueueMessage;
-use App\Repository\Equeue\EqueueRawHtmlRepository;
-use App\Repository\Equeue\EqueueSnapshotRepository;
-use App\Repository\Equeue\EqueueWatchRepository;
-use App\Repository\MonitoringConfigRepositoryInterface;
+use App\DocumentCenter\Application\EvaluateWatch\EvaluateWatchMessage;
+use App\DocumentCenter\Domain\DocumentCenterRawHtml;
+use App\DocumentCenter\Domain\DocumentCenterSnapshot;
+use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterRawHtmlRepository;
+use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterSnapshotRepository;
+use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterWatchRepository;
+use App\DocumentCenter\Infrastructure\Fetcher\DocumentCenterFetcherInterface;
+use App\Monitoring\Infrastructure\MonitoringConfigRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Lock\LockFactory;
@@ -21,22 +19,22 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
-final class PollEqueueHandler
+final class PollDocumentCenterHandler
 {
     public function __construct(
-        private readonly EqueueFetcherInterface $fetcher,
-        private readonly EqueueRawHtmlRepository $rawHtmlRepository,
+        private readonly DocumentCenterFetcherInterface $fetcher,
+        private readonly DocumentCenterRawHtmlRepository $rawHtmlRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly MessageBusInterface $messageBus,
         private readonly LockFactory $lockFactory,
-        private readonly EqueueSnapshotRepository $snapshotRepository,
-        private readonly EqueueWatchRepository $watchRepository,
+        private readonly DocumentCenterSnapshotRepository $snapshotRepository,
+        private readonly DocumentCenterWatchRepository $watchRepository,
         private readonly LoggerInterface $logger,
         private readonly MonitoringConfigRepositoryInterface $monitoringConfigRepository,
     ) {
     }
 
-    public function __invoke(PollEqueueMessage $message): void
+    public function __invoke(PollDocumentCenterMessage $message): void
     {
         if (!$this->monitoringConfigRepository->isEnabled()) {
             $this->logger->info('equeue polling disabled, skipping');
@@ -61,9 +59,9 @@ final class PollEqueueHandler
                 $this->logger->warning('e-queue fetch returned non-success status', [
                     'status' => $response->statusCode,
                 ]);
-                $this->entityManager->persist(new EqueueSnapshot(
+                $this->entityManager->persist(new DocumentCenterSnapshot(
                     $response->fetchedAt,
-                    EqueueSnapshot::STATUS_HTTP_ERROR,
+                    DocumentCenterSnapshot::STATUS_HTTP_ERROR,
                     $response->statusCode,
                     [],
                     0,
@@ -77,10 +75,10 @@ final class PollEqueueHandler
             [$alertPresent, $slots, $parserVersion] = $this->parseResponse($response->body);
 
             $this->rawHtmlRepository->deleteOlderThan(new \DateTimeImmutable('-8 hours'));
-            $this->entityManager->persist(new EqueueRawHtml($response->fetchedAt, $alertPresent, $response->body));
-            $snapshot = new EqueueSnapshot(
+            $this->entityManager->persist(new DocumentCenterRawHtml($response->fetchedAt, $alertPresent, $response->body));
+            $snapshot = new DocumentCenterSnapshot(
                 $response->fetchedAt,
-                EqueueSnapshot::STATUS_OK,
+                DocumentCenterSnapshot::STATUS_OK,
                 $response->statusCode,
                 ['alertPresent' => $alertPresent, 'slots' => $slots],
                 0,
@@ -97,11 +95,7 @@ final class PollEqueueHandler
 
                 $previousAlertPresent = $previous?->getPayload()['alertPresent'] ?? null;
                 if (false !== $previousAlertPresent) {
-                    $this->logger->info('e-queue alert absent — state transition, broadcasting');
-                    $text = !empty($slots)
-                        ? $this->formatSlotMessage($slots)
-                        : "⚡️ Вейкап Нео, стан змінився!\nhttps://munich.pasport.org.ua/solutions/e-queue";
-                    $this->messageBus->dispatch(new BroadcastTelegramMessage($text));
+                    $this->logger->info('e-queue alert absent — state transition detected');
                 }
             }
         } finally {
@@ -122,27 +116,5 @@ final class PollEqueueHandler
         }
 
         return [str_contains($body, 'Наразі всі місця зайняті'), [], 'cloudflare-bypass-v1'];
-    }
-
-    private const MONTHS_UA = [
-        1 => 'січня', 2 => 'лютого', 3 => 'березня', 4 => 'квітня',
-        5 => 'травня', 6 => 'червня', 7 => 'липня', 8 => 'серпня',
-        9 => 'вересня', 10 => 'жовтня', 11 => 'листопада', 12 => 'грудня',
-    ];
-
-    /** @param list<array{date: string, times: list<string>}> $slots */
-    private function formatSlotMessage(array $slots): string
-    {
-        $lines = [];
-        foreach ($slots as $slot) {
-            $dt = new \DateTimeImmutable($slot['date']);
-            $day = $dt->format('j');
-            $month = self::MONTHS_UA[(int) $dt->format('n')];
-            $lines[] = "{$day} {$month}: ".implode(', ', $slot['times']);
-        }
-
-        return "🗓 Є вільні місця в черзі!\n\n"
-            .implode("\n", $lines)
-            ."\n\n👉 https://munich.pasport.org.ua/solutions/e-queue";
     }
 }

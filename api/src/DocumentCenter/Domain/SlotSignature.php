@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Equeue;
+namespace App\DocumentCenter\Domain;
 
 final class SlotSignature
 {

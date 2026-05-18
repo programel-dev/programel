@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Equeue\Schedule;
+namespace App\DocumentCenter\Infrastructure\Schedule;
 
-use App\Message\Equeue\PollEqueueMessage;
+use App\DocumentCenter\Application\PollDocumentCenter\PollDocumentCenterMessage;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Scheduler\Attribute\AsSchedule;
 use Symfony\Component\Scheduler\RecurringMessage;
@@ -12,7 +12,7 @@ use Symfony\Component\Scheduler\Schedule;
 use Symfony\Component\Scheduler\ScheduleProviderInterface;
 
 #[AsSchedule('default')]
-final class EqueueSchedule implements ScheduleProviderInterface
+final class DocumentCenterSchedule implements ScheduleProviderInterface
 {
     public function __construct(
         #[Autowire(env: 'int:EQUEUE_POLL_INTERVAL')]
@@ -26,7 +26,7 @@ final class EqueueSchedule implements ScheduleProviderInterface
             ->add(
                 RecurringMessage::every(
                     sprintf('%d seconds', max(60, $this->pollInterval)),
-                    new PollEqueueMessage(),
+                    new PollDocumentCenterMessage(),
                 ),
             );
     }

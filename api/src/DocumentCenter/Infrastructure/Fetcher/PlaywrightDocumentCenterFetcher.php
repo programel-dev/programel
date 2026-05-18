@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Equeue\Fetcher;
+namespace App\DocumentCenter\Infrastructure\Fetcher;
 
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-final class PlaywrightEqueueFetcher implements EqueueFetcherInterface
+final class PlaywrightDocumentCenterFetcher implements DocumentCenterFetcherInterface
 {
     public function __construct(
         private readonly HttpClientInterface $httpClient,
@@ -16,14 +16,14 @@ final class PlaywrightEqueueFetcher implements EqueueFetcherInterface
     ) {
     }
 
-    public function fetch(): EqueueRawResponse
+    public function fetch(): DocumentCenterRawResponse
     {
         $fetchedAt = new \DateTimeImmutable();
 
         if ('' === $this->playwrightUrl) {
             $this->logger->error('playwright fetcher: PLAYWRIGHT_EQUEUE_URL not configured');
 
-            return new EqueueRawResponse(0, '', '', $fetchedAt);
+            return new DocumentCenterRawResponse(0, '', '', $fetchedAt);
         }
 
         try {
@@ -35,7 +35,7 @@ final class PlaywrightEqueueFetcher implements EqueueFetcherInterface
         } catch (\Throwable $e) {
             $this->logger->error('playwright fetcher request failed', ['exception' => $e->getMessage()]);
 
-            return new EqueueRawResponse(0, '', '', $fetchedAt);
+            return new DocumentCenterRawResponse(0, '', '', $fetchedAt);
         }
 
         if (!($data['success'] ?? false)) {
@@ -43,9 +43,9 @@ final class PlaywrightEqueueFetcher implements EqueueFetcherInterface
                 'reason' => $data['reason'] ?? 'unknown',
             ]);
 
-            return new EqueueRawResponse(0, '', '', $fetchedAt);
+            return new DocumentCenterRawResponse(0, '', '', $fetchedAt);
         }
 
-        return new EqueueRawResponse(200, (string) json_encode($data), 'application/json', $fetchedAt);
+        return new DocumentCenterRawResponse(200, (string) json_encode($data), 'application/json', $fetchedAt);
     }
 }

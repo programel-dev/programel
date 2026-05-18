@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Telegram;
+namespace App\Telegram\Infrastructure;
 
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;

@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace App\Repository\Equeue;
+namespace App\DocumentCenter\Infrastructure\Doctrine;
 
-use App\Entity\Equeue\EqueueNotification;
-use App\Entity\Equeue\EqueueWatch;
+use App\DocumentCenter\Domain\DocumentCenterNotification;
+use App\DocumentCenter\Domain\DocumentCenterWatch;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<EqueueNotification>
+ * @extends ServiceEntityRepository<DocumentCenterNotification>
  */
-class EqueueNotificationRepository extends ServiceEntityRepository
+class DocumentCenterNotificationRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, EqueueNotification::class);
+        parent::__construct($registry, DocumentCenterNotification::class);
     }
 
-    public function exists(EqueueWatch $watch, string $slotSignature): bool
+    public function exists(DocumentCenterWatch $watch, string $slotSignature): bool
     {
         return null !== $this->findOneBy([
             'watch' => $watch,

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Controller\Telegram;
+namespace App\Telegram\Infrastructure\Controller;
 
-use App\Entity\Telegram\TelegramAccount;
-use App\Entity\User;
-use App\Repository\Telegram\TelegramAccountRepository;
-use App\Telegram\ConnectTokenGenerator;
+use App\Telegram\Infrastructure\ConnectTokenGenerator;
+use App\Telegram\Infrastructure\TelegramAccount;
+use App\Telegram\Infrastructure\TelegramAccountRepository;
+use App\User\Domain\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;

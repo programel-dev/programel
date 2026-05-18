@@ -2,15 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Entity\Telegram;
+namespace App\Telegram\Infrastructure;
 
-use App\Entity\User;
-use App\Repository\Telegram\TelegramAccountRepository;
+use App\User\Domain\User;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: TelegramAccountRepository::class)]
-#[ORM\Table(name: 'telegram_account')]
+#[ORM\Table(name: 'account', schema: 'telegram')]
 #[ORM\Index(name: 'idx_telegram_account_connect_token', columns: ['connect_token'])]
 class TelegramAccount
 {

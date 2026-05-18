@@ -2,19 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\MessageHandler\Equeue;
+namespace App\DocumentCenter\Application\EvaluateWatch;
 
-use App\Entity\Equeue\EqueueNotification;
-use App\Entity\Equeue\EqueueWatch;
-use App\Equeue\SlotSignature;
-use App\Message\Equeue\EvaluateWatchMessage;
-use App\Message\Telegram\SendTelegramMessage;
-use App\Repository\Equeue\EqueueNotificationRepository;
-use App\Repository\Equeue\EqueueSnapshotRepository;
-use App\Repository\Equeue\EqueueWatchRepository;
-use App\Repository\Telegram\TelegramAccountRepository;
+use App\DocumentCenter\Application\Event\DocumentCenterSlotAvailableEvent;
+use App\DocumentCenter\Domain\DocumentCenterNotification;
+use App\DocumentCenter\Domain\DocumentCenterWatch;
+use App\DocumentCenter\Domain\SlotSignature;
+use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterNotificationRepository;
+use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterSnapshotRepository;
+use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterWatchRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -22,13 +19,11 @@ use Symfony\Component\Messenger\MessageBusInterface;
 final class EvaluateWatchHandler
 {
     public function __construct(
-        private readonly EqueueWatchRepository $watchRepository,
-        private readonly EqueueSnapshotRepository $snapshotRepository,
-        private readonly EqueueNotificationRepository $notificationRepository,
-        private readonly TelegramAccountRepository $telegramAccountRepository,
+        private readonly DocumentCenterWatchRepository $watchRepository,
+        private readonly DocumentCenterSnapshotRepository $snapshotRepository,
+        private readonly DocumentCenterNotificationRepository $notificationRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly MessageBusInterface $messageBus,
-        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -44,12 +39,8 @@ final class EvaluateWatchHandler
             return;
         }
 
-        $telegramAccount = $this->telegramAccountRepository->findByUser($watch->getUser());
-        if (null === $telegramAccount || !$telegramAccount->isConnected()) {
-            $this->logger->info('Skipping evaluation: watch owner has no connected Telegram', [
-                'watchId' => $message->watchId,
-            ]);
-
+        $userId = $watch->getUser()?->getId();
+        if (null === $userId) {
             return;
         }
 
@@ -78,20 +69,22 @@ final class EvaluateWatchHandler
                     continue;
                 }
 
-                $notification = new EqueueNotification($watch, $signature);
+                $notification = new DocumentCenterNotification($watch, $signature);
                 $this->entityManager->persist($notification);
                 $this->entityManager->flush();
 
-                $this->messageBus->dispatch(new SendTelegramMessage(
-                    (string) $telegramAccount->getChatId(),
-                    $this->formatMessage($serviceLabel, $slotAt),
+                $this->messageBus->dispatch(new DocumentCenterSlotAvailableEvent(
+                    $userId,
+                    $slotAt,
+                    $watch->getServiceCode(),
+                    $serviceLabel,
                     (int) $notification->getId(),
                 ));
             }
         }
     }
 
-    private function dateInRange(\DateTimeImmutable $slotAt, EqueueWatch $watch): bool
+    private function dateInRange(\DateTimeImmutable $slotAt, DocumentCenterWatch $watch): bool
     {
         $slotDate = \DateTimeImmutable::createFromFormat('!Y-m-d', $slotAt->format('Y-m-d'));
         if (false === $slotDate) {
@@ -102,15 +95,5 @@ final class EvaluateWatchHandler
         $to = $watch->getDateTo();
 
         return null !== $from && null !== $to && $slotDate >= $from && $slotDate <= $to;
-    }
-
-    private function formatMessage(string $serviceLabel, \DateTimeImmutable $slotAt): string
-    {
-        return sprintf(
-            "🟢 Вільний слот!\n\n📋 %s\n📅 %s\n\n%s",
-            $serviceLabel,
-            $slotAt->format('d.m.Y H:i'),
-            'https://munich.pasport.org.ua/solutions/e-queue',
-        );
     }
 }
