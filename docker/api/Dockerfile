@@ -38,7 +38,8 @@ COPY api/composer.json api/composer.lock ./
 RUN composer install --no-dev --no-scripts --no-interaction --optimize-autoloader
 
 COPY api/ .
-RUN composer dump-autoload --optimize --classmap-authoritative \
+RUN rm -rf src/Shared/Infrastructure/DataFixtures/ \
+    && composer dump-autoload --optimize --classmap-authoritative \
     && rm /usr/bin/composer \
     && echo "APP_ENV=prod" > .env \
     && mkdir -p var/cache var/log \
