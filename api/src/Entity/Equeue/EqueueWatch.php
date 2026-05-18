@@ -45,6 +45,8 @@ use Symfony\Component\Validator\Constraints as Assert;
 )]
 class EqueueWatch
 {
+    public const SERVICE_CODE = '4';
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -56,14 +58,9 @@ class EqueueWatch
     private ?User $user = null;
 
     #[ORM\Column(length: 128)]
-    #[Assert\NotBlank]
-    #[Assert\Length(max: 128)]
-    #[Groups(['equeue_watch:read', 'equeue_watch:write'])]
-    private string $serviceCode = '';
+    private string $serviceCode = self::SERVICE_CODE;
 
     #[ORM\Column(length: 255, nullable: true)]
-    #[Assert\Length(max: 255)]
-    #[Groups(['equeue_watch:read', 'equeue_watch:write'])]
     private ?string $serviceLabel = null;
 
     #[ORM\Column(type: Types::DATE_IMMUTABLE)]

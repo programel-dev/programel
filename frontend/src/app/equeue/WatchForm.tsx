@@ -12,8 +12,6 @@ const inThirtyDays = () =>
   new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
 export function WatchForm({ onCreated }: WatchFormProps) {
-  const [serviceCode, setServiceCode] = useState("");
-  const [serviceLabel, setServiceLabel] = useState("");
   const [dateFrom, setDateFrom] = useState(today());
   const [dateTo, setDateTo] = useState(inThirtyDays());
   const [submitting, setSubmitting] = useState(false);
@@ -25,8 +23,6 @@ export function WatchForm({ onCreated }: WatchFormProps) {
     setError(null);
 
     const input: EqueueWatchInput = {
-      serviceCode: serviceCode.trim(),
-      serviceLabel: serviceLabel.trim() || null,
       dateFrom,
       dateTo,
       active: true,
@@ -34,8 +30,6 @@ export function WatchForm({ onCreated }: WatchFormProps) {
 
     try {
       await createWatch(input);
-      setServiceCode("");
-      setServiceLabel("");
       onCreated();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не вдалося зберегти");
@@ -51,31 +45,6 @@ export function WatchForm({ onCreated }: WatchFormProps) {
     >
       <h3 className="text-lg font-semibold">Нове відстеження</h3>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block text-sm">
-          <span className="mb-1 block text-zinc-700 dark:text-zinc-300">
-            Код послуги
-          </span>
-          <input
-            type="text"
-            required
-            value={serviceCode}
-            onChange={(e) => setServiceCode(e.target.value)}
-            placeholder="passport"
-            className="w-full rounded border border-zinc-300 px-3 py-1.5 dark:border-zinc-700 dark:bg-zinc-800"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="mb-1 block text-zinc-700 dark:text-zinc-300">
-            Назва (опц.)
-          </span>
-          <input
-            type="text"
-            value={serviceLabel}
-            onChange={(e) => setServiceLabel(e.target.value)}
-            placeholder="Закордонний паспорт"
-            className="w-full rounded border border-zinc-300 px-3 py-1.5 dark:border-zinc-700 dark:bg-zinc-800"
-          />
-        </label>
         <label className="block text-sm">
           <span className="mb-1 block text-zinc-700 dark:text-zinc-300">
             Дата з

@@ -12,8 +12,6 @@ export interface EqueueWatch {
 }
 
 export interface EqueueWatchInput {
-  serviceCode: string;
-  serviceLabel?: string | null;
   dateFrom: string;
   dateTo: string;
   active: boolean;
