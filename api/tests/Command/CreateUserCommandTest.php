@@ -2,8 +2,8 @@
 
 namespace App\Tests\Command;
 
-use App\Command\CreateUserCommand;
-use App\Entity\User;
+use App\Shared\Infrastructure\Command\CreateUserCommand;
+use App\User\Domain\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use PHPUnit\Framework\MockObject\MockObject;

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Command;
+namespace App\Shared\Infrastructure\Command;
 
-use App\Telegram\TelegramApiException;
-use App\Telegram\TelegramClient;
+use App\Telegram\Infrastructure\TelegramApiException;
+use App\Telegram\Infrastructure\TelegramClient;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;

@@ -1,8 +1,10 @@
 <?php
 
-namespace App\Command;
+declare(strict_types=1);
 
-use App\Entity\User;
+namespace App\Shared\Infrastructure\Command;
+
+use App\User\Domain\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;

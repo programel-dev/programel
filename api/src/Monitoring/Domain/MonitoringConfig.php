@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Entity;
+namespace App\Monitoring\Domain;
 
-use App\Repository\MonitoringConfigRepository;
+use App\Monitoring\Infrastructure\MonitoringConfigRepository;
+use App\User\Domain\User;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: MonitoringConfigRepository::class)]
-#[ORM\Table(name: 'monitoring_config')]
+#[ORM\Table(name: 'config', schema: 'monitoring')]
 final class MonitoringConfig
 {
     #[ORM\Id]

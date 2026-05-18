@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Entity\Equeue;
+namespace App\DocumentCenter\Domain;
 
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Delete;
@@ -10,40 +10,40 @@ use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
-use App\Entity\User;
-use App\Repository\Equeue\EqueueWatchRepository;
-use App\State\EqueueWatchOwnerProcessor;
-use App\State\EqueueWatchOwnerProvider;
+use App\DocumentCenter\Infrastructure\ApiPlatform\DocumentCenterWatchOwnerProcessor;
+use App\DocumentCenter\Infrastructure\ApiPlatform\DocumentCenterWatchOwnerProvider;
+use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterWatchRepository;
+use App\User\Domain\User;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
-#[ORM\Entity(repositoryClass: EqueueWatchRepository::class)]
-#[ORM\Table(name: 'equeue_watch')]
+#[ORM\Entity(repositoryClass: DocumentCenterWatchRepository::class)]
+#[ORM\Table(name: 'watch', schema: 'document_center')]
 #[ORM\Index(name: 'idx_equeue_watch_user_active', columns: ['user_id', 'active'])]
 #[ApiResource(
     shortName: 'EqueueWatch',
     operations: [
         new GetCollection(
             security: "is_granted('ROLE_USER')",
-            provider: EqueueWatchOwnerProvider::class,
+            provider: DocumentCenterWatchOwnerProvider::class,
         ),
         new Get(security: "is_granted('ROLE_USER') and object.getUser() == user"),
         new Post(
             security: "is_granted('ROLE_USER')",
-            processor: EqueueWatchOwnerProcessor::class,
+            processor: DocumentCenterWatchOwnerProcessor::class,
         ),
         new Patch(
             security: "is_granted('ROLE_USER') and object.getUser() == user",
-            processor: EqueueWatchOwnerProcessor::class,
+            processor: DocumentCenterWatchOwnerProcessor::class,
         ),
         new Delete(security: "is_granted('ROLE_USER') and object.getUser() == user"),
     ],
     normalizationContext: ['groups' => ['equeue_watch:read']],
     denormalizationContext: ['groups' => ['equeue_watch:write']],
 )]
-class EqueueWatch
+class DocumentCenterWatch
 {
     public const SERVICE_CODE = '4';
 

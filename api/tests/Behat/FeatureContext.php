@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Behat;
 
-use App\Entity\User;
+use App\User\Domain\User;
 use Behat\Behat\Context\Context;
 use Behat\Gherkin\Node\PyStringNode;
 use Doctrine\ORM\EntityManagerInterface;

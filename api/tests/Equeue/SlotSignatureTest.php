@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Equeue;
 
-use App\Equeue\SlotSignature;
+use App\DocumentCenter\Domain\SlotSignature;
 use PHPUnit\Framework\TestCase;
 
 final class SlotSignatureTest extends TestCase

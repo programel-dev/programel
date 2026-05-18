@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Equeue\Fetcher;
 
-use App\Equeue\Fetcher\FlareSolverrEqueueFetcher;
+use App\DocumentCenter\Infrastructure\Fetcher\FlareSolverrDocumentCenterFetcher;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -31,7 +31,7 @@ final class FlareSolverrEqueueFetcherTest extends TestCase
         $client = $this->createMock(HttpClientInterface::class);
         $client->method('request')->willReturn($response);
 
-        $fetcher = new FlareSolverrEqueueFetcher($client, self::FLARESOLVERR_URL, self::TARGET_URL, new NullLogger());
+        $fetcher = new FlareSolverrDocumentCenterFetcher($client, self::FLARESOLVERR_URL, self::TARGET_URL, new NullLogger());
         $result = $fetcher->fetch();
 
         self::assertTrue($result->isSuccess());
@@ -50,7 +50,7 @@ final class FlareSolverrEqueueFetcherTest extends TestCase
         $client = $this->createMock(HttpClientInterface::class);
         $client->method('request')->willReturn($response);
 
-        $fetcher = new FlareSolverrEqueueFetcher($client, self::FLARESOLVERR_URL, self::TARGET_URL, new NullLogger());
+        $fetcher = new FlareSolverrDocumentCenterFetcher($client, self::FLARESOLVERR_URL, self::TARGET_URL, new NullLogger());
         $result = $fetcher->fetch();
 
         self::assertFalse($result->isSuccess());
@@ -72,7 +72,7 @@ final class FlareSolverrEqueueFetcherTest extends TestCase
         $client = $this->createMock(HttpClientInterface::class);
         $client->method('request')->willReturn($response);
 
-        $fetcher = new FlareSolverrEqueueFetcher($client, self::FLARESOLVERR_URL, self::TARGET_URL, new NullLogger());
+        $fetcher = new FlareSolverrDocumentCenterFetcher($client, self::FLARESOLVERR_URL, self::TARGET_URL, new NullLogger());
         $result = $fetcher->fetch();
 
         self::assertFalse($result->isSuccess());
@@ -94,7 +94,7 @@ final class FlareSolverrEqueueFetcherTest extends TestCase
         $client = $this->createMock(HttpClientInterface::class);
         $client->method('request')->willReturn($response);
 
-        $fetcher = new FlareSolverrEqueueFetcher($client, self::FLARESOLVERR_URL, self::TARGET_URL, new NullLogger());
+        $fetcher = new FlareSolverrDocumentCenterFetcher($client, self::FLARESOLVERR_URL, self::TARGET_URL, new NullLogger());
         $result = $fetcher->fetch();
 
         self::assertFalse($result->isSuccess());
@@ -107,7 +107,7 @@ final class FlareSolverrEqueueFetcherTest extends TestCase
         $client = $this->createMock(HttpClientInterface::class);
         $client->method('request')->willThrowException(new \RuntimeException('Connection refused'));
 
-        $fetcher = new FlareSolverrEqueueFetcher($client, self::FLARESOLVERR_URL, self::TARGET_URL, new NullLogger());
+        $fetcher = new FlareSolverrDocumentCenterFetcher($client, self::FLARESOLVERR_URL, self::TARGET_URL, new NullLogger());
         $result = $fetcher->fetch();
 
         self::assertFalse($result->isSuccess());

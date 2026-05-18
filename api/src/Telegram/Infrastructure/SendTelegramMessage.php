@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Message\Telegram;
+namespace App\Telegram\Infrastructure;
 
 final readonly class SendTelegramMessage
 {

@@ -5,7 +5,7 @@ security:
     providers:
         app_user_provider:
             entity:
-                class: App\Entity\User
+                class: App\User\Domain\User
                 property: email
 
     firewalls:
@@ -33,7 +33,7 @@ security:
                 check_path: /api/v1/auth/login
                 username_path: email
                 password_path: password
-                success_handler: App\Security\AuthenticationSuccessHandler
+                success_handler: App\User\Infrastructure\Security\AuthenticationSuccessHandler
                 failure_handler: lexik_jwt_authentication.handler.authentication_failure
 
         refresh:

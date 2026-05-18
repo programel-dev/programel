@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Telegram;
 
-use App\Telegram\ConnectTokenGenerator;
+use App\Telegram\Infrastructure\ConnectTokenGenerator;
 use PHPUnit\Framework\TestCase;
 
 final class ConnectTokenGeneratorTest extends TestCase

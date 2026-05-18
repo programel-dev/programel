@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Controller\Telegram;
+namespace App\Telegram\Infrastructure\Controller;
 
-use App\Entity\Telegram\TelegramAccount;
-use App\Repository\Telegram\TelegramAccountRepository;
-use App\Telegram\TelegramApiException;
-use App\Telegram\TelegramClient;
+use App\Telegram\Infrastructure\TelegramAccount;
+use App\Telegram\Infrastructure\TelegramAccountRepository;
+use App\Telegram\Infrastructure\TelegramApiException;
+use App\Telegram\Infrastructure\TelegramClient;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
