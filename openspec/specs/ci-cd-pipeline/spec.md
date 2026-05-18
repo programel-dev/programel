@@ -54,3 +54,10 @@ The system SHALL deploy to DigitalOcean by pulling new images and restarting ser
 #### Scenario: Migration failure aborts deploy
 - **WHEN** database migrations fail during deployment
 - **THEN** the deploy job fails, previous containers remain running, and the workflow reports the error
+
+### Requirement: Telegram webhook re-registration on every deploy
+The system SHALL re-register the Telegram bot webhook after every successful deployment to ensure Telegram uses the current server IP (bypasses Telegram-side DNS cache).
+
+#### Scenario: Webhook registered after deploy
+- **WHEN** the deploy job runs successfully
+- **THEN** `app:telegram:set-webhook https://programel.com` is executed, refreshing the webhook URL in Telegram's registry
