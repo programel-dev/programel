@@ -12,6 +12,7 @@ use App\Message\Equeue\PollEqueueMessage;
 use App\MessageHandler\Equeue\PollEqueueHandler;
 use App\Repository\Equeue\EqueueRawHtmlRepository;
 use App\Repository\Equeue\EqueueSnapshotRepository;
+use App\Repository\Equeue\EqueueWatchRepository;
 use App\Repository\MonitoringConfigRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -335,6 +336,7 @@ final class PollEqueueHandlerTest extends TestCase
         ?LockFactory $lockFactory = null,
         ?EqueueSnapshotRepository $snapshotRepo = null,
         ?EqueueRawHtmlRepository $rawHtmlRepo = null,
+        ?EqueueWatchRepository $watchRepo = null,
     ): PollEqueueHandler {
         $monitoring = $this->createMock(MonitoringConfigRepositoryInterface::class);
         $monitoring->method('isEnabled')->willReturn(true);
@@ -346,6 +348,7 @@ final class PollEqueueHandlerTest extends TestCase
             messageBus: $bus ?? $this->createMock(MessageBusInterface::class),
             lockFactory: $lockFactory ?? $this->lockFactory,
             snapshotRepository: $snapshotRepo ?? $this->createMock(EqueueSnapshotRepository::class),
+            watchRepository: $watchRepo ?? $this->createConfiguredMock(EqueueWatchRepository::class, ['findAllActive' => []]),
             logger: new NullLogger(),
             monitoringConfigRepository: $monitoring,
         );
