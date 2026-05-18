@@ -235,6 +235,51 @@ final class PollEqueueHandlerTest extends TestCase
         self::assertCount(0, $dispatched);
     }
 
+    // --- Snapshot pruning ---
+
+    public function testSnapshotPruningRunsOnSuccessfulPoll(): void
+    {
+        $body = '<html><p>Вільно</p></html>';
+        $response = new EqueueRawResponse(200, $body, 'text/html', new \DateTimeImmutable());
+
+        $cutoffs = [];
+        $snapshotRepo = $this->createMock(EqueueSnapshotRepository::class);
+        $snapshotRepo->method('findLatest')->willReturn(null);
+        $snapshotRepo->expects(self::once())->method('deleteOlderThan')
+            ->willReturnCallback(function (\DateTimeImmutable $cutoff) use (&$cutoffs): void {
+                $cutoffs[] = $cutoff;
+            });
+
+        $before = new \DateTimeImmutable('-8 hours');
+        $this->invoke(response: $response, previousSnapshot: null, snapshotRepo: $snapshotRepo);
+        $after = new \DateTimeImmutable('-8 hours');
+
+        self::assertCount(1, $cutoffs);
+        self::assertGreaterThanOrEqual($before->getTimestamp(), $cutoffs[0]->getTimestamp());
+        self::assertLessThanOrEqual($after->getTimestamp(), $cutoffs[0]->getTimestamp());
+    }
+
+    public function testSnapshotPruningRunsOnHttpError(): void
+    {
+        $response = new EqueueRawResponse(403, '', 'text/html', new \DateTimeImmutable());
+
+        $cutoffs = [];
+        $snapshotRepo = $this->createMock(EqueueSnapshotRepository::class);
+        $snapshotRepo->method('findLatest')->willReturn(null);
+        $snapshotRepo->expects(self::once())->method('deleteOlderThan')
+            ->willReturnCallback(function (\DateTimeImmutable $cutoff) use (&$cutoffs): void {
+                $cutoffs[] = $cutoff;
+            });
+
+        $before = new \DateTimeImmutable('-8 hours');
+        $this->invoke(response: $response, previousSnapshot: null, snapshotRepo: $snapshotRepo);
+        $after = new \DateTimeImmutable('-8 hours');
+
+        self::assertCount(1, $cutoffs);
+        self::assertGreaterThanOrEqual($before->getTimestamp(), $cutoffs[0]->getTimestamp());
+        self::assertLessThanOrEqual($after->getTimestamp(), $cutoffs[0]->getTimestamp());
+    }
+
     // --- Helpers ---
 
     /**
@@ -244,6 +289,7 @@ final class PollEqueueHandlerTest extends TestCase
         EqueueRawResponse $response,
         ?EqueueSnapshot $previousSnapshot,
         ?EqueueRawHtmlRepository $rawHtmlRepo = null,
+        ?EqueueSnapshotRepository $snapshotRepo = null,
     ): array {
         $fetcher = $this->createMock(EqueueFetcherInterface::class);
         $fetcher->method('fetch')->willReturn($response);
@@ -264,8 +310,10 @@ final class PollEqueueHandlerTest extends TestCase
             }
         );
 
-        $snapshotRepo = $this->createMock(EqueueSnapshotRepository::class);
-        $snapshotRepo->method('findLatest')->willReturn($previousSnapshot);
+        if (null === $snapshotRepo) {
+            $snapshotRepo = $this->createMock(EqueueSnapshotRepository::class);
+            $snapshotRepo->method('findLatest')->willReturn($previousSnapshot);
+        }
 
         $handler = $this->makeHandler(
             fetcher: $fetcher,

@@ -52,6 +52,8 @@ final class PollEqueueHandler
             $previous = $this->snapshotRepository->findLatest();
             $response = $this->fetcher->fetch();
 
+            $this->snapshotRepository->deleteOlderThan(new \DateTimeImmutable('-8 hours'));
+
             if (!$response->isSuccess()) {
                 $this->logger->warning('e-queue fetch returned non-success status', [
                     'status' => $response->statusCode,
@@ -72,7 +74,6 @@ final class PollEqueueHandler
             [$alertPresent, $slots, $parserVersion] = $this->parseResponse($response->body);
 
             $this->rawHtmlRepository->deleteOlderThan(new \DateTimeImmutable('-8 hours'));
-            $this->snapshotRepository->deleteOlderThan(new \DateTimeImmutable('-30 days'));
             $this->entityManager->persist(new EqueueRawHtml($response->fetchedAt, $alertPresent, $response->body));
             $this->entityManager->persist(new EqueueSnapshot(
                 $response->fetchedAt,
