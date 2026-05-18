@@ -19,6 +19,7 @@ services:
         exclude:
             - '../src/DependencyInjection/'
             - '../src/Kernel.php'
+            - '../src/Shared/Infrastructure/DataFixtures/'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
@@ -34,11 +35,18 @@ services:
 
     App\DocumentCenter\Infrastructure\Fetcher\DocumentCenterFetcherInterface: '@App\DocumentCenter\Infrastructure\Fetcher\PlaywrightDocumentCenterFetcher'
 
-when@prod:
+when@dev:
     services:
-        App\:
-            resource: '../src/'
-            exclude:
-                - '../src/DependencyInjection/'
-                - '../src/Kernel.php'
-                - '../src/Shared/Infrastructure/DataFixtures/'
+        _defaults:
+            autowire: true
+            autoconfigure: true
+        App\Shared\Infrastructure\DataFixtures\:
+            resource: '../src/Shared/Infrastructure/DataFixtures/'
+
+when@test:
+    services:
+        _defaults:
+            autowire: true
+            autoconfigure: true
+        App\Shared\Infrastructure\DataFixtures\:
+            resource: '../src/Shared/Infrastructure/DataFixtures/'
