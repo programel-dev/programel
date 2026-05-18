@@ -299,3 +299,25 @@ account via a one-time deep-link.
 #### Scenario: User status check
 - **WHEN** an authenticated user GETs `/api/v1/telegram/status`
 - **THEN** the API returns `{ connected: bool, connectedAt: string|null }`
+
+### Requirement: Snapshot rolling retention window
+
+The system SHALL maintain `equeue_snapshot` as a rolling 8-hour buffer
+(matching `equeue_raw_html` retention) by deleting stale rows on every poll
+cycle, regardless of poll outcome.
+
+#### Scenario: Cleanup runs on successful poll
+- **WHEN** `PollEqueueHandler` completes a successful fetch (HTTP 2xx)
+- **THEN** all `equeue_snapshot` rows with `fetchedAt < NOW() - 8 hours`
+  are deleted before writing the new snapshot
+
+#### Scenario: Cleanup runs on failed poll
+- **WHEN** `PollEqueueHandler` receives an HTTP error or network failure
+- **THEN** all `equeue_snapshot` rows with `fetchedAt < NOW() - 8 hours`
+  are deleted before writing the error snapshot; cleanup SHALL NOT be
+  skipped when the fetch itself fails
+
+#### Scenario: Steady-state row count
+- **WHEN** polling runs continuously at the minimum interval (60 s)
+- **THEN** the `equeue_snapshot` table contains at most ~480 rows
+  (8 h × 60 polls/h)
