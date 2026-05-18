@@ -133,6 +133,34 @@ broadcast a Telegram notification to all connected users **only when state trans
 - **WHEN** any `EqueueSnapshot` is persisted by `PollEqueueHandler`
 - **THEN** `parserVersion` is set to `'cloudflare-bypass-v1'`
 
+### Requirement: Snapshot payload contains slot data
+
+The `equeue_snapshot.payload` SHALL contain `alertPresent` (bool) AND `slots` (array of `{date, times[]}` objects). `alertPresent` SHALL be `false` when `slots` is non-empty, `true` when the "Наразі всі місця зайняті" text is detected OR Playwright service returns no slots.
+
+#### Scenario: Slots available
+- **WHEN** Playwright scraper returns non-empty `slots` array
+- **THEN** snapshot is persisted with `{"alertPresent": false, "slots": [{"date": "YYYY-MM-DD", "times": ["HH:MM", ...]}]}`
+
+#### Scenario: No slots available
+- **WHEN** Playwright scraper returns empty `slots` array
+- **THEN** snapshot is persisted with `{"alertPresent": true, "slots": []}`
+
+#### Scenario: Scraper error
+- **WHEN** Playwright scraper returns `success: false`
+- **THEN** snapshot is persisted with `STATUS_HTTP_ERROR` and no broadcast is sent
+
+### Requirement: Telegram notification includes specific slots
+
+When slots appear (state transition `noSlots → hasSlots`), the Telegram message SHALL include formatted dates and times.
+
+#### Scenario: Broadcast with slot details
+- **WHEN** `alertPresent` transitions from `true` (or null) to `false` with non-empty `slots`
+- **THEN** Telegram message contains each available date with its time list, formatted in Ukrainian locale (e.g., "25 травня: 09:00, 10:30"), and a link to the queue page
+
+#### Scenario: Broadcast without slot details (fallback)
+- **WHEN** `alertPresent` is `false` but `slots` array is empty (legacy FlareSolverr fetcher)
+- **THEN** Telegram message is sent without slot details (existing behaviour preserved)
+
 ### Requirement: User watch subscriptions
 
 The system SHALL allow authenticated users to create, read, update, and
