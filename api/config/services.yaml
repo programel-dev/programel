@@ -33,3 +33,12 @@ services:
             $playwrightUrl: '%env(PLAYWRIGHT_EQUEUE_URL)%'
 
     App\DocumentCenter\Infrastructure\Fetcher\DocumentCenterFetcherInterface: '@App\DocumentCenter\Infrastructure\Fetcher\PlaywrightDocumentCenterFetcher'
+
+when@prod:
+    services:
+        App\:
+            resource: '../src/'
+            exclude:
+                - '../src/DependencyInjection/'
+                - '../src/Kernel.php'
+                - '../src/Shared/Infrastructure/DataFixtures/'
