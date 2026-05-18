@@ -8,9 +8,11 @@ use App\Entity\Equeue\EqueueRawHtml;
 use App\Entity\Equeue\EqueueSnapshot;
 use App\Equeue\Fetcher\EqueueFetcherInterface;
 use App\Message\Equeue\BroadcastTelegramMessage;
+use App\Message\Equeue\EvaluateWatchMessage;
 use App\Message\Equeue\PollEqueueMessage;
 use App\Repository\Equeue\EqueueRawHtmlRepository;
 use App\Repository\Equeue\EqueueSnapshotRepository;
+use App\Repository\Equeue\EqueueWatchRepository;
 use App\Repository\MonitoringConfigRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -28,6 +30,7 @@ final class PollEqueueHandler
         private readonly MessageBusInterface $messageBus,
         private readonly LockFactory $lockFactory,
         private readonly EqueueSnapshotRepository $snapshotRepository,
+        private readonly EqueueWatchRepository $watchRepository,
         private readonly LoggerInterface $logger,
         private readonly MonitoringConfigRepositoryInterface $monitoringConfigRepository,
     ) {
@@ -75,17 +78,23 @@ final class PollEqueueHandler
 
             $this->rawHtmlRepository->deleteOlderThan(new \DateTimeImmutable('-8 hours'));
             $this->entityManager->persist(new EqueueRawHtml($response->fetchedAt, $alertPresent, $response->body));
-            $this->entityManager->persist(new EqueueSnapshot(
+            $snapshot = new EqueueSnapshot(
                 $response->fetchedAt,
                 EqueueSnapshot::STATUS_OK,
                 $response->statusCode,
                 ['alertPresent' => $alertPresent, 'slots' => $slots],
                 0,
                 $parserVersion,
-            ));
+            );
+            $this->entityManager->persist($snapshot);
             $this->entityManager->flush();
 
             if (!$alertPresent) {
+                $snapshotId = (int) $snapshot->getId();
+                foreach ($this->watchRepository->findAllActive() as $watch) {
+                    $this->messageBus->dispatch(new EvaluateWatchMessage($watch->getId(), $snapshotId));
+                }
+
                 $previousAlertPresent = $previous?->getPayload()['alertPresent'] ?? null;
                 if (false !== $previousAlertPresent) {
                     $this->logger->info('e-queue alert absent — state transition, broadcasting');

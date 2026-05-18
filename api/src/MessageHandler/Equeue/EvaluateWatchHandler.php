@@ -55,42 +55,39 @@ final class EvaluateWatchHandler
 
         $payload = $snapshot->getPayload();
         $slots = is_array($payload['slots'] ?? null) ? $payload['slots'] : [];
+        $serviceLabel = $watch->getServiceLabel() ?? $watch->getServiceCode();
 
         foreach ($slots as $slot) {
-            if (!is_array($slot) || !isset($slot['serviceCode'], $slot['slotAt'])) {
-                continue;
-            }
-            if ($slot['serviceCode'] !== $watch->getServiceCode()) {
+            if (!is_array($slot) || !isset($slot['date'], $slot['times']) || !is_array($slot['times'])) {
                 continue;
             }
 
-            try {
-                $slotAt = new \DateTimeImmutable((string) $slot['slotAt']);
-            } catch (\Exception) {
-                continue;
+            foreach ($slot['times'] as $time) {
+                try {
+                    $slotAt = new \DateTimeImmutable($slot['date'].' '.(string) $time);
+                } catch (\Exception) {
+                    continue;
+                }
+
+                if (!$this->dateInRange($slotAt, $watch)) {
+                    continue;
+                }
+
+                $signature = SlotSignature::for($watch->getServiceCode(), $slotAt);
+                if ($this->notificationRepository->exists($watch, $signature)) {
+                    continue;
+                }
+
+                $notification = new EqueueNotification($watch, $signature);
+                $this->entityManager->persist($notification);
+                $this->entityManager->flush();
+
+                $this->messageBus->dispatch(new SendTelegramMessage(
+                    (string) $telegramAccount->getChatId(),
+                    $this->formatMessage($serviceLabel, $slotAt),
+                    (int) $notification->getId(),
+                ));
             }
-
-            if (!$this->dateInRange($slotAt, $watch)) {
-                continue;
-            }
-
-            $signature = SlotSignature::for($watch->getServiceCode(), $slotAt);
-            if ($this->notificationRepository->exists($watch, $signature)) {
-                continue;
-            }
-
-            $notification = new EqueueNotification($watch, $signature);
-            $this->entityManager->persist($notification);
-            $this->entityManager->flush();
-
-            $serviceLabel = isset($slot['serviceLabel']) ? (string) $slot['serviceLabel'] : $watch->getServiceCode();
-            $text = $this->formatMessage($serviceLabel, $slotAt);
-
-            $this->messageBus->dispatch(new SendTelegramMessage(
-                (string) $telegramAccount->getChatId(),
-                $text,
-                (int) $notification->getId(),
-            ));
         }
     }
 

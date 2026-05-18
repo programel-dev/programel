@@ -9,6 +9,7 @@ use App\Message\Equeue\PollEqueueMessage;
 use App\MessageHandler\Equeue\PollEqueueHandler;
 use App\Repository\Equeue\EqueueRawHtmlRepository;
 use App\Repository\Equeue\EqueueSnapshotRepository;
+use App\Repository\Equeue\EqueueWatchRepository;
 use App\Repository\MonitoringConfigRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -36,6 +37,7 @@ final class PollEqueueHandlerDisabledTest extends TestCase
             messageBus: $this->createMock(MessageBusInterface::class),
             lockFactory: $lockFactory,
             snapshotRepository: $this->createMock(EqueueSnapshotRepository::class),
+            watchRepository: $this->createMock(EqueueWatchRepository::class),
             logger: $this->createMock(LoggerInterface::class),
             monitoringConfigRepository: $monitoring,
         );
