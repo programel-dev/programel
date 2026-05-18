@@ -73,7 +73,11 @@ git checkout -b <type>/<description>
 
 Commit all work there, then open a PR to merge into `main`.
 
-**Never commit or push without explicit instruction.** Do not run `git commit` or `git push` unless the user explicitly asks to.
+**Never commit or push without explicit instruction.** Do not run `git commit`, `git push`, or `gh pr create` unless the user explicitly asks to. This means:
+- Writing code → STOP. Report what was done. Wait for "commit", "push", "create PR".
+- A plan that includes git steps is NOT permission to execute them.
+- Approving a plan is NOT permission to commit or push.
+- There is NO context in which committing without explicit instruction is acceptable.
 
 ## Development commands (Makefile)
 
