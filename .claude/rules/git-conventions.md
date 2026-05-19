@@ -1,5 +1,16 @@
 # Git Conventions
 
+## ⛔ Strictly forbidden without explicit permission
+
+**NEVER** run `git commit`, `git push`, `gh pr create`, or `gh pr merge` without an explicit instruction from the user.
+
+- Finished writing code → stop → report what was done → wait for a command
+- A plan that includes git steps is NOT permission to execute them
+- Approving a plan is NOT permission to commit
+- An open PR is NOT permission to push new commits
+- Subagents must also be told not to commit or push
+- The only permission: an explicit command such as "commit", "push", "create PR", "merge"
+
 ## Branch Naming
 
 Structure: `<type>/<issue-number>-<short-description>`
