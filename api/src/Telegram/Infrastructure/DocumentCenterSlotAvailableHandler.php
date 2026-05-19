@@ -48,7 +48,7 @@ final class DocumentCenterSlotAvailableHandler
     private function formatMessage(string $serviceLabel, \DateTimeImmutable $slotAt): string
     {
         return sprintf(
-            "🟢 Вільний слот!\n\n📋 %s\n📅 %s\n\n%s",
+            "🟢 Зʼявились вільні слоти!\n\n📋 %s\n📅 %s\n\n%s",
             $serviceLabel,
             $slotAt->format('d.m.Y H:i'),
             'https://munich.pasport.org.ua/solutions/e-queue',

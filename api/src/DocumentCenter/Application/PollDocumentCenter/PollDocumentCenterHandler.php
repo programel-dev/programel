@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 namespace App\DocumentCenter\Application\PollDocumentCenter;
 
-use App\DocumentCenter\Application\EvaluateWatch\EvaluateWatchMessage;
+use App\DocumentCenter\Application\BroadcastSlotsAvailable\BroadcastSlotsAvailableMessage;
 use App\DocumentCenter\Domain\DocumentCenterRawHtml;
-use App\DocumentCenter\Domain\DocumentCenterSlot;
 use App\DocumentCenter\Domain\DocumentCenterSnapshot;
 use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterRawHtmlRepository;
-use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterSlotRepository;
 use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterSnapshotRepository;
-use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterWatchRepository;
 use App\DocumentCenter\Infrastructure\Fetcher\DocumentCenterFetcherInterface;
 use App\Monitoring\Infrastructure\MonitoringConfigRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -26,12 +23,10 @@ final class PollDocumentCenterHandler
     public function __construct(
         private readonly DocumentCenterFetcherInterface $fetcher,
         private readonly DocumentCenterRawHtmlRepository $rawHtmlRepository,
-        private readonly DocumentCenterSlotRepository $slotRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly MessageBusInterface $messageBus,
         private readonly LockFactory $lockFactory,
         private readonly DocumentCenterSnapshotRepository $snapshotRepository,
-        private readonly DocumentCenterWatchRepository $watchRepository,
         private readonly LoggerInterface $logger,
         private readonly MonitoringConfigRepositoryInterface $monitoringConfigRepository,
     ) {
@@ -80,31 +75,19 @@ final class PollDocumentCenterHandler
             $this->rawHtmlRepository->deleteOlderThan(new \DateTimeImmutable('-8 hours'));
             $this->entityManager->persist(new DocumentCenterRawHtml($response->fetchedAt, $alertPresent, $response->body));
 
-            if ('application/json' === $response->contentType) {
-                $this->slotRepository->deleteOlderThan(new \DateTimeImmutable('-8 hours'));
-                $this->entityManager->persist(new DocumentCenterSlot($response->fetchedAt, $slots));
-            }
-            $snapshot = new DocumentCenterSnapshot(
+            $this->entityManager->persist(new DocumentCenterSnapshot(
                 $response->fetchedAt,
                 DocumentCenterSnapshot::STATUS_OK,
                 $response->statusCode,
                 ['alertPresent' => $alertPresent, 'slots' => $slots],
                 0,
                 $parserVersion,
-            );
-            $this->entityManager->persist($snapshot);
+            ));
             $this->entityManager->flush();
 
-            if (!$alertPresent) {
-                $snapshotId = (int) $snapshot->getId();
-                foreach ($this->watchRepository->findAllActive() as $watch) {
-                    $this->messageBus->dispatch(new EvaluateWatchMessage($watch->getId(), $snapshotId));
-                }
-
-                $previousAlertPresent = $previous?->getPayload()['alertPresent'] ?? null;
-                if (false !== $previousAlertPresent) {
-                    $this->logger->info('e-queue alert absent — state transition detected');
-                }
+            $wasAlertPresent = $previous?->getPayload()['alertPresent'] ?? null;
+            if (true === $wasAlertPresent && false === $alertPresent) {
+                $this->messageBus->dispatch(new BroadcastSlotsAvailableMessage());
             }
         } finally {
             $lock->release();

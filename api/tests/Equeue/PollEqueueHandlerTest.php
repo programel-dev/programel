@@ -4,16 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Equeue;
 
-use App\DocumentCenter\Application\EvaluateWatch\EvaluateWatchMessage;
+use App\DocumentCenter\Application\BroadcastSlotsAvailable\BroadcastSlotsAvailableMessage;
 use App\DocumentCenter\Application\PollDocumentCenter\PollDocumentCenterHandler;
 use App\DocumentCenter\Application\PollDocumentCenter\PollDocumentCenterMessage;
 use App\DocumentCenter\Domain\DocumentCenterRawHtml;
-use App\DocumentCenter\Domain\DocumentCenterSlot;
 use App\DocumentCenter\Domain\DocumentCenterSnapshot;
 use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterRawHtmlRepository;
-use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterSlotRepository;
 use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterSnapshotRepository;
-use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterWatchRepository;
 use App\DocumentCenter\Infrastructure\Fetcher\DocumentCenterFetcherInterface;
 use App\DocumentCenter\Infrastructure\Fetcher\DocumentCenterRawResponse;
 use App\Monitoring\Infrastructure\MonitoringConfigRepositoryInterface;
@@ -138,9 +135,9 @@ final class PollEqueueHandlerTest extends TestCase
         self::assertLessThanOrEqual($after->getTimestamp(), $cutoffs[0]->getTimestamp());
     }
 
-    // --- Alert absent (per-watch dispatch) ---
+    // --- Alert absent ---
 
-    public function testFirstPollAlertAbsentDispatchesEvaluatePerWatch(): void
+    public function testFirstPollAlertAbsentDoesNotDispatchBroadcast(): void
     {
         $body = '<html><p>Запис доступний</p></html>';
         $response = new DocumentCenterRawResponse(200, $body, 'text/html', new \DateTimeImmutable());
@@ -149,24 +146,10 @@ final class PollEqueueHandlerTest extends TestCase
 
         $snap = array_values(array_filter($persisted, fn ($e) => $e instanceof DocumentCenterSnapshot))[0];
         self::assertSame('cloudflare-bypass-v1', $snap->getParserVersion());
-
-        // 0 active watches → 0 EvaluateWatchMessage dispatched
         self::assertCount(0, $dispatched);
     }
 
-    public function testAlertPresentToAbsentDispatchesEvaluatePerWatch(): void
-    {
-        $previous = $this->makeSnapshot(DocumentCenterSnapshot::STATUS_OK, 200, ['alertPresent' => true]);
-        $body = '<html><p>Вільно</p></html>';
-        $response = new DocumentCenterRawResponse(200, $body, 'text/html', new \DateTimeImmutable());
-
-        [$persisted, $dispatched] = $this->invoke(response: $response, previousSnapshot: $previous);
-
-        // 0 active watches → 0 dispatched
-        self::assertCount(0, $dispatched);
-    }
-
-    public function testConsecutiveAlertAbsentSilent(): void
+    public function testConsecutiveAlertAbsentDoesNotDispatchBroadcast(): void
     {
         $previous = $this->makeSnapshot(DocumentCenterSnapshot::STATUS_OK, 200, ['alertPresent' => false]);
         $body = '<html><p>Вільно</p></html>';
@@ -177,7 +160,21 @@ final class PollEqueueHandlerTest extends TestCase
         self::assertCount(0, $dispatched);
     }
 
-    public function testHttpErrorToAlertAbsentDispatchesEvaluatePerWatch(): void
+    // --- State transition: alert present → absent → broadcast ---
+
+    public function testStateTransitionAlertPresentToAbsentDispatchesBroadcast(): void
+    {
+        $previous = $this->makeSnapshot(DocumentCenterSnapshot::STATUS_OK, 200, ['alertPresent' => true]);
+        $body = '<html><p>Вільно</p></html>';
+        $response = new DocumentCenterRawResponse(200, $body, 'text/html', new \DateTimeImmutable());
+
+        [$persisted, $dispatched] = $this->invoke(response: $response, previousSnapshot: $previous);
+
+        self::assertCount(1, $dispatched);
+        self::assertInstanceOf(BroadcastSlotsAvailableMessage::class, $dispatched[0]);
+    }
+
+    public function testHttpErrorToAlertAbsentDoesNotDispatchBroadcast(): void
     {
         $previous = $this->makeSnapshot(DocumentCenterSnapshot::STATUS_HTTP_ERROR, 403, []);
         $body = '<html><p>Вільно</p></html>';
@@ -185,7 +182,6 @@ final class PollEqueueHandlerTest extends TestCase
 
         [$persisted, $dispatched] = $this->invoke(response: $response, previousSnapshot: $previous);
 
-        // 0 active watches → 0 dispatched
         self::assertCount(0, $dispatched);
     }
 
@@ -196,106 +192,6 @@ final class PollEqueueHandlerTest extends TestCase
         $response = new DocumentCenterRawResponse(200, $body, 'text/html', new \DateTimeImmutable());
 
         [$persisted, $dispatched] = $this->invoke(response: $response, previousSnapshot: $previous);
-
-        self::assertCount(0, $dispatched);
-    }
-
-    // --- Playwright JSON mode ---
-
-    public function testPlaywrightPersistsBothSlotAndRawHtml(): void
-    {
-        $slots = [
-            ['date' => '2026-05-25', 'times' => ['09:00', '10:30']],
-            ['date' => '2026-05-26', 'times' => ['11:00']],
-        ];
-        $fetchedAt = new \DateTimeImmutable('2026-05-17T12:00:00Z');
-        $body = (string) json_encode(['success' => true, 'slots' => $slots, 'fetchedAt' => '2026-05-17T12:00:00Z']);
-        $response = new DocumentCenterRawResponse(200, $body, 'application/json', $fetchedAt);
-
-        $slotCutoffs = [];
-        $slotRepo = $this->createMock(DocumentCenterSlotRepository::class);
-        $slotRepo->expects(self::once())->method('deleteOlderThan')
-            ->willReturnCallback(function (\DateTimeImmutable $cutoff) use (&$slotCutoffs): void {
-                $slotCutoffs[] = $cutoff;
-            });
-
-        $rawHtmlRepo = $this->createMock(DocumentCenterRawHtmlRepository::class);
-        $rawHtmlRepo->expects(self::once())->method('deleteOlderThan');
-
-        [$persisted] = $this->invoke(
-            response: $response,
-            previousSnapshot: null,
-            rawHtmlRepo: $rawHtmlRepo,
-            slotRepo: $slotRepo,
-        );
-
-        $slotEntities = array_values(array_filter($persisted, fn ($e) => $e instanceof DocumentCenterSlot));
-        self::assertCount(1, $slotEntities);
-        self::assertSame($slots, $slotEntities[0]->getSlots());
-        self::assertSame($fetchedAt, $slotEntities[0]->getFetchedAt());
-
-        $rawHtmlEntities = array_values(array_filter($persisted, fn ($e) => $e instanceof DocumentCenterRawHtml));
-        self::assertCount(1, $rawHtmlEntities);
-        self::assertFalse($rawHtmlEntities[0]->isAlertPresent());
-        self::assertSame($body, $rawHtmlEntities[0]->getHtmlBody());
-
-        $before = new \DateTimeImmutable('-8 hours');
-        self::assertGreaterThanOrEqual($before->getTimestamp(), $slotCutoffs[0]->getTimestamp());
-    }
-
-    public function testHtmlPersistsRawHtmlNotSlot(): void
-    {
-        $body = '<html><div>Наразі всі місця зайняті</div></html>';
-        $response = new DocumentCenterRawResponse(200, $body, 'text/html', new \DateTimeImmutable());
-
-        $slotRepo = $this->createMock(DocumentCenterSlotRepository::class);
-        $slotRepo->expects(self::never())->method('deleteOlderThan');
-
-        $rawHtmlRepo = $this->createMock(DocumentCenterRawHtmlRepository::class);
-        $rawHtmlRepo->expects(self::once())->method('deleteOlderThan');
-
-        [$persisted] = $this->invoke(
-            response: $response,
-            previousSnapshot: null,
-            rawHtmlRepo: $rawHtmlRepo,
-            slotRepo: $slotRepo,
-        );
-
-        self::assertCount(1, array_filter($persisted, fn ($e) => $e instanceof DocumentCenterRawHtml));
-        self::assertCount(0, array_filter($persisted, fn ($e) => $e instanceof DocumentCenterSlot));
-    }
-
-    public function testPlaywrightWithSlotsDispatchesEvaluatePerWatch(): void
-    {
-        $slots = [
-            ['date' => '2026-05-25', 'times' => ['09:00', '10:30']],
-            ['date' => '2026-05-26', 'times' => ['11:00']],
-        ];
-        $body = (string) json_encode(['success' => true, 'slots' => $slots, 'fetchedAt' => '2026-05-17T12:00:00Z']);
-        $response = new DocumentCenterRawResponse(200, $body, 'application/json', new \DateTimeImmutable());
-
-        [$persisted, $dispatched] = $this->invoke(response: $response, previousSnapshot: null);
-
-        $snap = array_values(array_filter($persisted, fn ($e) => $e instanceof DocumentCenterSnapshot))[0];
-        self::assertSame('playwright-slot-v1', $snap->getParserVersion());
-        self::assertFalse($snap->getPayload()['alertPresent']);
-        self::assertSame($slots, $snap->getPayload()['slots']);
-
-        // 0 active watches → 0 EvaluateWatchMessage dispatched
-        self::assertCount(0, $dispatched);
-    }
-
-    public function testPlaywrightEmptySlotsAlertPresent(): void
-    {
-        $body = (string) json_encode(['success' => true, 'slots' => [], 'fetchedAt' => '2026-05-17T12:00:00Z']);
-        $response = new DocumentCenterRawResponse(200, $body, 'application/json', new \DateTimeImmutable());
-
-        [$persisted, $dispatched] = $this->invoke(response: $response, previousSnapshot: null);
-
-        $snap = array_values(array_filter($persisted, fn ($e) => $e instanceof DocumentCenterSnapshot))[0];
-        self::assertSame('playwright-slot-v1', $snap->getParserVersion());
-        self::assertTrue($snap->getPayload()['alertPresent']);
-        self::assertSame([], $snap->getPayload()['slots']);
 
         self::assertCount(0, $dispatched);
     }
@@ -355,7 +251,6 @@ final class PollEqueueHandlerTest extends TestCase
         ?DocumentCenterSnapshot $previousSnapshot,
         ?DocumentCenterRawHtmlRepository $rawHtmlRepo = null,
         ?DocumentCenterSnapshotRepository $snapshotRepo = null,
-        ?DocumentCenterSlotRepository $slotRepo = null,
     ): array {
         $fetcher = $this->createMock(DocumentCenterFetcherInterface::class);
         $fetcher->method('fetch')->willReturn($response);
@@ -387,7 +282,6 @@ final class PollEqueueHandlerTest extends TestCase
             bus: $bus,
             snapshotRepo: $snapshotRepo,
             rawHtmlRepo: $rawHtmlRepo,
-            slotRepo: $slotRepo,
         );
 
         ($handler)(new PollDocumentCenterMessage());
@@ -402,8 +296,6 @@ final class PollEqueueHandlerTest extends TestCase
         ?LockFactory $lockFactory = null,
         ?DocumentCenterSnapshotRepository $snapshotRepo = null,
         ?DocumentCenterRawHtmlRepository $rawHtmlRepo = null,
-        ?DocumentCenterWatchRepository $watchRepo = null,
-        ?DocumentCenterSlotRepository $slotRepo = null,
     ): PollDocumentCenterHandler {
         $monitoring = $this->createMock(MonitoringConfigRepositoryInterface::class);
         $monitoring->method('isEnabled')->willReturn(true);
@@ -411,12 +303,10 @@ final class PollEqueueHandlerTest extends TestCase
         return new PollDocumentCenterHandler(
             fetcher: $fetcher ?? $this->createMock(DocumentCenterFetcherInterface::class),
             rawHtmlRepository: $rawHtmlRepo ?? $this->createMock(DocumentCenterRawHtmlRepository::class),
-            slotRepository: $slotRepo ?? $this->createMock(DocumentCenterSlotRepository::class),
             entityManager: $em ?? $this->createMock(EntityManagerInterface::class),
             messageBus: $bus ?? $this->createMock(MessageBusInterface::class),
             lockFactory: $lockFactory ?? $this->lockFactory,
             snapshotRepository: $snapshotRepo ?? $this->createMock(DocumentCenterSnapshotRepository::class),
-            watchRepository: $watchRepo ?? $this->createConfiguredMock(DocumentCenterWatchRepository::class, ['findAllActive' => []]),
             logger: new NullLogger(),
             monitoringConfigRepository: $monitoring,
         );
