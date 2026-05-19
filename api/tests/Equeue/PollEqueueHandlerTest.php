@@ -8,8 +8,10 @@ use App\DocumentCenter\Application\EvaluateWatch\EvaluateWatchMessage;
 use App\DocumentCenter\Application\PollDocumentCenter\PollDocumentCenterHandler;
 use App\DocumentCenter\Application\PollDocumentCenter\PollDocumentCenterMessage;
 use App\DocumentCenter\Domain\DocumentCenterRawHtml;
+use App\DocumentCenter\Domain\DocumentCenterSlot;
 use App\DocumentCenter\Domain\DocumentCenterSnapshot;
 use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterRawHtmlRepository;
+use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterSlotRepository;
 use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterSnapshotRepository;
 use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterWatchRepository;
 use App\DocumentCenter\Infrastructure\Fetcher\DocumentCenterFetcherInterface;
@@ -200,6 +202,66 @@ final class PollEqueueHandlerTest extends TestCase
 
     // --- Playwright JSON mode ---
 
+    public function testPlaywrightPersistsSlotNotRawHtml(): void
+    {
+        $slots = [
+            ['date' => '2026-05-25', 'times' => ['09:00', '10:30']],
+            ['date' => '2026-05-26', 'times' => ['11:00']],
+        ];
+        $fetchedAt = new \DateTimeImmutable('2026-05-17T12:00:00Z');
+        $body = (string) json_encode(['success' => true, 'slots' => $slots, 'fetchedAt' => '2026-05-17T12:00:00Z']);
+        $response = new DocumentCenterRawResponse(200, $body, 'application/json', $fetchedAt);
+
+        $slotCutoffs = [];
+        $slotRepo = $this->createMock(DocumentCenterSlotRepository::class);
+        $slotRepo->expects(self::once())->method('deleteOlderThan')
+            ->willReturnCallback(function (\DateTimeImmutable $cutoff) use (&$slotCutoffs): void {
+                $slotCutoffs[] = $cutoff;
+            });
+
+        $rawHtmlRepo = $this->createMock(DocumentCenterRawHtmlRepository::class);
+        $rawHtmlRepo->expects(self::never())->method('deleteOlderThan');
+
+        [$persisted] = $this->invoke(
+            response: $response,
+            previousSnapshot: null,
+            rawHtmlRepo: $rawHtmlRepo,
+            slotRepo: $slotRepo,
+        );
+
+        $slotEntities = array_values(array_filter($persisted, fn ($e) => $e instanceof DocumentCenterSlot));
+        self::assertCount(1, $slotEntities);
+        self::assertSame($slots, $slotEntities[0]->getSlots());
+        self::assertSame($fetchedAt, $slotEntities[0]->getFetchedAt());
+
+        self::assertCount(0, array_filter($persisted, fn ($e) => $e instanceof DocumentCenterRawHtml));
+
+        $before = new \DateTimeImmutable('-8 hours');
+        self::assertGreaterThanOrEqual($before->getTimestamp(), $slotCutoffs[0]->getTimestamp());
+    }
+
+    public function testHtmlPersistsRawHtmlNotSlot(): void
+    {
+        $body = '<html><div>Наразі всі місця зайняті</div></html>';
+        $response = new DocumentCenterRawResponse(200, $body, 'text/html', new \DateTimeImmutable());
+
+        $slotRepo = $this->createMock(DocumentCenterSlotRepository::class);
+        $slotRepo->expects(self::never())->method('deleteOlderThan');
+
+        $rawHtmlRepo = $this->createMock(DocumentCenterRawHtmlRepository::class);
+        $rawHtmlRepo->expects(self::once())->method('deleteOlderThan');
+
+        [$persisted] = $this->invoke(
+            response: $response,
+            previousSnapshot: null,
+            rawHtmlRepo: $rawHtmlRepo,
+            slotRepo: $slotRepo,
+        );
+
+        self::assertCount(1, array_filter($persisted, fn ($e) => $e instanceof DocumentCenterRawHtml));
+        self::assertCount(0, array_filter($persisted, fn ($e) => $e instanceof DocumentCenterSlot));
+    }
+
     public function testPlaywrightWithSlotsDispatchesEvaluatePerWatch(): void
     {
         $slots = [
@@ -290,6 +352,7 @@ final class PollEqueueHandlerTest extends TestCase
         ?DocumentCenterSnapshot $previousSnapshot,
         ?DocumentCenterRawHtmlRepository $rawHtmlRepo = null,
         ?DocumentCenterSnapshotRepository $snapshotRepo = null,
+        ?DocumentCenterSlotRepository $slotRepo = null,
     ): array {
         $fetcher = $this->createMock(DocumentCenterFetcherInterface::class);
         $fetcher->method('fetch')->willReturn($response);
@@ -321,6 +384,7 @@ final class PollEqueueHandlerTest extends TestCase
             bus: $bus,
             snapshotRepo: $snapshotRepo,
             rawHtmlRepo: $rawHtmlRepo,
+            slotRepo: $slotRepo,
         );
 
         ($handler)(new PollDocumentCenterMessage());
@@ -336,6 +400,7 @@ final class PollEqueueHandlerTest extends TestCase
         ?DocumentCenterSnapshotRepository $snapshotRepo = null,
         ?DocumentCenterRawHtmlRepository $rawHtmlRepo = null,
         ?DocumentCenterWatchRepository $watchRepo = null,
+        ?DocumentCenterSlotRepository $slotRepo = null,
     ): PollDocumentCenterHandler {
         $monitoring = $this->createMock(MonitoringConfigRepositoryInterface::class);
         $monitoring->method('isEnabled')->willReturn(true);
@@ -343,6 +408,7 @@ final class PollEqueueHandlerTest extends TestCase
         return new PollDocumentCenterHandler(
             fetcher: $fetcher ?? $this->createMock(DocumentCenterFetcherInterface::class),
             rawHtmlRepository: $rawHtmlRepo ?? $this->createMock(DocumentCenterRawHtmlRepository::class),
+            slotRepository: $slotRepo ?? $this->createMock(DocumentCenterSlotRepository::class),
             entityManager: $em ?? $this->createMock(EntityManagerInterface::class),
             messageBus: $bus ?? $this->createMock(MessageBusInterface::class),
             lockFactory: $lockFactory ?? $this->lockFactory,

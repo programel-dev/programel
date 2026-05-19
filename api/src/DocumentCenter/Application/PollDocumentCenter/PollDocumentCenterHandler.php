@@ -6,8 +6,10 @@ namespace App\DocumentCenter\Application\PollDocumentCenter;
 
 use App\DocumentCenter\Application\EvaluateWatch\EvaluateWatchMessage;
 use App\DocumentCenter\Domain\DocumentCenterRawHtml;
+use App\DocumentCenter\Domain\DocumentCenterSlot;
 use App\DocumentCenter\Domain\DocumentCenterSnapshot;
 use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterRawHtmlRepository;
+use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterSlotRepository;
 use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterSnapshotRepository;
 use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterWatchRepository;
 use App\DocumentCenter\Infrastructure\Fetcher\DocumentCenterFetcherInterface;
@@ -24,6 +26,7 @@ final class PollDocumentCenterHandler
     public function __construct(
         private readonly DocumentCenterFetcherInterface $fetcher,
         private readonly DocumentCenterRawHtmlRepository $rawHtmlRepository,
+        private readonly DocumentCenterSlotRepository $slotRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly MessageBusInterface $messageBus,
         private readonly LockFactory $lockFactory,
@@ -74,8 +77,13 @@ final class PollDocumentCenterHandler
 
             [$alertPresent, $slots, $parserVersion] = $this->parseResponse($response->body);
 
-            $this->rawHtmlRepository->deleteOlderThan(new \DateTimeImmutable('-8 hours'));
-            $this->entityManager->persist(new DocumentCenterRawHtml($response->fetchedAt, $alertPresent, $response->body));
+            if ('application/json' === $response->contentType) {
+                $this->slotRepository->deleteOlderThan(new \DateTimeImmutable('-8 hours'));
+                $this->entityManager->persist(new DocumentCenterSlot($response->fetchedAt, $slots));
+            } else {
+                $this->rawHtmlRepository->deleteOlderThan(new \DateTimeImmutable('-8 hours'));
+                $this->entityManager->persist(new DocumentCenterRawHtml($response->fetchedAt, $alertPresent, $response->body));
+            }
             $snapshot = new DocumentCenterSnapshot(
                 $response->fetchedAt,
                 DocumentCenterSnapshot::STATUS_OK,
