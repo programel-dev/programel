@@ -77,12 +77,12 @@ final class PollDocumentCenterHandler
 
             [$alertPresent, $slots, $parserVersion] = $this->parseResponse($response->body);
 
+            $this->rawHtmlRepository->deleteOlderThan(new \DateTimeImmutable('-8 hours'));
+            $this->entityManager->persist(new DocumentCenterRawHtml($response->fetchedAt, $alertPresent, $response->body));
+
             if ('application/json' === $response->contentType) {
                 $this->slotRepository->deleteOlderThan(new \DateTimeImmutable('-8 hours'));
                 $this->entityManager->persist(new DocumentCenterSlot($response->fetchedAt, $slots));
-            } else {
-                $this->rawHtmlRepository->deleteOlderThan(new \DateTimeImmutable('-8 hours'));
-                $this->entityManager->persist(new DocumentCenterRawHtml($response->fetchedAt, $alertPresent, $response->body));
             }
             $snapshot = new DocumentCenterSnapshot(
                 $response->fetchedAt,
