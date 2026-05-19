@@ -8,6 +8,7 @@ use App\DocumentCenter\Application\BroadcastSlotsAvailable\BroadcastSlotsAvailab
 use App\DocumentCenter\Application\PollDocumentCenter\PollDocumentCenterHandler;
 use App\DocumentCenter\Application\PollDocumentCenter\PollDocumentCenterMessage;
 use App\DocumentCenter\Domain\DocumentCenterRawHtml;
+use App\DocumentCenter\Domain\DocumentCenterSlot;
 use App\DocumentCenter\Domain\DocumentCenterSnapshot;
 use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterRawHtmlRepository;
 use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterSnapshotRepository;
@@ -196,6 +197,93 @@ final class PollEqueueHandlerTest extends TestCase
         self::assertCount(0, $dispatched);
     }
 
+    // --- Slot scraping ---
+
+    public function testSlotScrapingDisabledSkipsPlaywright(): void
+    {
+        $previous = $this->makeSnapshot(DocumentCenterSnapshot::STATUS_OK, 200, ['alertPresent' => true]);
+        $body = '<html><p>Вільно</p></html>';
+        $response = new DocumentCenterRawResponse(200, $body, 'text/html', new \DateTimeImmutable());
+
+        $slotScraper = $this->createMock(DocumentCenterFetcherInterface::class);
+        $slotScraper->expects(self::never())->method('fetch');
+
+        [$persisted, $dispatched] = $this->invoke(
+            response: $response,
+            previousSnapshot: $previous,
+            slotScraper: $slotScraper,
+            slotScrapingEnabled: false,
+        );
+
+        self::assertCount(1, $dispatched);
+        $msg = $dispatched[0];
+        self::assertInstanceOf(BroadcastSlotsAvailableMessage::class, $msg);
+        self::assertNull($msg->date);
+        self::assertSame([], $msg->slots);
+    }
+
+    public function testSlotScrapingEnabledPersistsSlotAndPassesToBroadcast(): void
+    {
+        $previous = $this->makeSnapshot(DocumentCenterSnapshot::STATUS_OK, 200, ['alertPresent' => true]);
+        $body = '<html><p>Вільно</p></html>';
+        $response = new DocumentCenterRawResponse(200, $body, 'text/html', new \DateTimeImmutable());
+
+        $slotData = json_encode([
+            'success' => true,
+            'date' => '20.05.2026',
+            'dateFormatted' => '20 травня 2026',
+            'slots' => ['10:30 — 5 вільних слотів', '11:00 — 3 вільних слоти'],
+            'fetchedAt' => (new \DateTimeImmutable())->format(\DateTimeInterface::ATOM),
+        ]);
+        $slotResponse = new DocumentCenterRawResponse(200, (string) $slotData, 'application/json', new \DateTimeImmutable());
+
+        $slotScraper = $this->createMock(DocumentCenterFetcherInterface::class);
+        $slotScraper->expects(self::once())->method('fetch')->willReturn($slotResponse);
+
+        [$persisted, $dispatched] = $this->invoke(
+            response: $response,
+            previousSnapshot: $previous,
+            slotScraper: $slotScraper,
+            slotScrapingEnabled: true,
+        );
+
+        $slots = array_values(array_filter($persisted, fn ($e) => $e instanceof DocumentCenterSlot));
+        self::assertCount(1, $slots);
+
+        self::assertCount(1, $dispatched);
+        $msg = $dispatched[0];
+        self::assertInstanceOf(BroadcastSlotsAvailableMessage::class, $msg);
+        self::assertSame('20 травня 2026', $msg->date);
+        self::assertSame(['10:30 — 5 вільних слотів', '11:00 — 3 вільних слоти'], $msg->slots);
+    }
+
+    public function testSlotScrapingEnabledButPlaywrightFailsGracefully(): void
+    {
+        $previous = $this->makeSnapshot(DocumentCenterSnapshot::STATUS_OK, 200, ['alertPresent' => true]);
+        $body = '<html><p>Вільно</p></html>';
+        $response = new DocumentCenterRawResponse(200, $body, 'text/html', new \DateTimeImmutable());
+
+        $slotResponse = new DocumentCenterRawResponse(0, '', 'application/json', new \DateTimeImmutable());
+
+        $slotScraper = $this->createMock(DocumentCenterFetcherInterface::class);
+        $slotScraper->method('fetch')->willReturn($slotResponse);
+
+        [$persisted, $dispatched] = $this->invoke(
+            response: $response,
+            previousSnapshot: $previous,
+            slotScraper: $slotScraper,
+            slotScrapingEnabled: true,
+        );
+
+        $slots = array_values(array_filter($persisted, fn ($e) => $e instanceof DocumentCenterSlot));
+        self::assertCount(0, $slots);
+
+        self::assertCount(1, $dispatched);
+        $msg = $dispatched[0];
+        self::assertNull($msg->date);
+        self::assertSame([], $msg->slots);
+    }
+
     // --- Snapshot pruning ---
 
     public function testSnapshotPruningRunsOnSuccessfulPoll(): void
@@ -251,6 +339,8 @@ final class PollEqueueHandlerTest extends TestCase
         ?DocumentCenterSnapshot $previousSnapshot,
         ?DocumentCenterRawHtmlRepository $rawHtmlRepo = null,
         ?DocumentCenterSnapshotRepository $snapshotRepo = null,
+        ?DocumentCenterFetcherInterface $slotScraper = null,
+        bool $slotScrapingEnabled = false,
     ): array {
         $fetcher = $this->createMock(DocumentCenterFetcherInterface::class);
         $fetcher->method('fetch')->willReturn($response);
@@ -282,6 +372,8 @@ final class PollEqueueHandlerTest extends TestCase
             bus: $bus,
             snapshotRepo: $snapshotRepo,
             rawHtmlRepo: $rawHtmlRepo,
+            slotScraper: $slotScraper,
+            slotScrapingEnabled: $slotScrapingEnabled,
         );
 
         ($handler)(new PollDocumentCenterMessage());
@@ -296,12 +388,16 @@ final class PollEqueueHandlerTest extends TestCase
         ?LockFactory $lockFactory = null,
         ?DocumentCenterSnapshotRepository $snapshotRepo = null,
         ?DocumentCenterRawHtmlRepository $rawHtmlRepo = null,
+        ?DocumentCenterFetcherInterface $slotScraper = null,
+        bool $slotScrapingEnabled = false,
     ): PollDocumentCenterHandler {
         $monitoring = $this->createMock(MonitoringConfigRepositoryInterface::class);
         $monitoring->method('isEnabled')->willReturn(true);
+        $monitoring->method('isSlotScrapingEnabled')->willReturn($slotScrapingEnabled);
 
         return new PollDocumentCenterHandler(
             fetcher: $fetcher ?? $this->createMock(DocumentCenterFetcherInterface::class),
+            slotScraper: $slotScraper ?? $this->createMock(DocumentCenterFetcherInterface::class),
             rawHtmlRepository: $rawHtmlRepo ?? $this->createMock(DocumentCenterRawHtmlRepository::class),
             entityManager: $em ?? $this->createMock(EntityManagerInterface::class),
             messageBus: $bus ?? $this->createMock(MessageBusInterface::class),

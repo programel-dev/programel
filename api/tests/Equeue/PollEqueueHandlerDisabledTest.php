@@ -31,6 +31,7 @@ final class PollEqueueHandlerDisabledTest extends TestCase
 
         $handler = new PollDocumentCenterHandler(
             fetcher: $fetcher,
+            slotScraper: $this->createMock(DocumentCenterFetcherInterface::class),
             rawHtmlRepository: $this->createMock(DocumentCenterRawHtmlRepository::class),
             entityManager: $this->createMock(EntityManagerInterface::class),
             messageBus: $this->createMock(MessageBusInterface::class),

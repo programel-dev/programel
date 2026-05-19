@@ -19,6 +19,9 @@ final class MonitoringConfig
     #[ORM\Column]
     private bool $enabled = true;
 
+    #[ORM\Column]
+    private bool $slotScrapingEnabled = false;
+
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $updatedAt;
 
@@ -54,6 +57,20 @@ final class MonitoringConfig
     public function setEnabled(bool $enabled, User $updatedBy): static
     {
         $this->enabled = $enabled;
+        $this->updatedBy = $updatedBy;
+        $this->updatedAt = new \DateTimeImmutable();
+
+        return $this;
+    }
+
+    public function isSlotScrapingEnabled(): bool
+    {
+        return $this->slotScrapingEnabled;
+    }
+
+    public function setSlotScrapingEnabled(bool $slotScrapingEnabled, User $updatedBy): static
+    {
+        $this->slotScrapingEnabled = $slotScrapingEnabled;
         $this->updatedBy = $updatedBy;
         $this->updatedAt = new \DateTimeImmutable();
 

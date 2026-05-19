@@ -58,6 +58,66 @@ final class BroadcastSlotsAvailableHandlerTest extends TestCase
         self::assertSame('222', $dispatched[1]->chatId);
     }
 
+    public function testFormattedMessageWithSlots(): void
+    {
+        $user = $this->createMock(User::class);
+        $watch = $this->createWatch($user);
+        $account = $this->createConnectedAccount('123');
+
+        $watchRepo = $this->createMock(DocumentCenterWatchRepository::class);
+        $watchRepo->method('findAllActive')->willReturn([$watch]);
+
+        $telegramRepo = $this->createMock(TelegramAccountRepository::class);
+        $telegramRepo->method('findByUser')->willReturn($account);
+
+        $dispatched = [];
+        $bus = $this->createMock(MessageBusInterface::class);
+        $bus->method('dispatch')->willReturnCallback(function (object $msg) use (&$dispatched): Envelope {
+            $dispatched[] = $msg;
+
+            return new Envelope($msg);
+        });
+
+        $handler = new BroadcastSlotsAvailableHandler($watchRepo, $telegramRepo, $bus, new NullLogger());
+        ($handler)(new BroadcastSlotsAvailableMessage('20 травня 2026', ['10:30 — 5 вільних слотів', '11:00 — 3 вільних слоти']));
+
+        self::assertCount(1, $dispatched);
+        self::assertInstanceOf(SendTelegramMessage::class, $dispatched[0]);
+        $text = $dispatched[0]->text;
+        self::assertStringContainsString('📅 20 травня 2026', $text);
+        self::assertStringContainsString('• 10:30 — 5 вільних слотів', $text);
+        self::assertStringContainsString('• 11:00 — 3 вільних слоти', $text);
+        self::assertStringNotContainsString('Зʼявились', $text);
+    }
+
+    public function testFallbackMessageWhenNoSlots(): void
+    {
+        $user = $this->createMock(User::class);
+        $watch = $this->createWatch($user);
+        $account = $this->createConnectedAccount('123');
+
+        $watchRepo = $this->createMock(DocumentCenterWatchRepository::class);
+        $watchRepo->method('findAllActive')->willReturn([$watch]);
+
+        $telegramRepo = $this->createMock(TelegramAccountRepository::class);
+        $telegramRepo->method('findByUser')->willReturn($account);
+
+        $dispatched = [];
+        $bus = $this->createMock(MessageBusInterface::class);
+        $bus->method('dispatch')->willReturnCallback(function (object $msg) use (&$dispatched): Envelope {
+            $dispatched[] = $msg;
+
+            return new Envelope($msg);
+        });
+
+        $handler = new BroadcastSlotsAvailableHandler($watchRepo, $telegramRepo, $bus, new NullLogger());
+        ($handler)(new BroadcastSlotsAvailableMessage(null, []));
+
+        self::assertCount(1, $dispatched);
+        self::assertStringContainsString('Зʼявились вільні слоти', $dispatched[0]->text);
+        self::assertStringNotContainsString('📅', $dispatched[0]->text);
+    }
+
     public function testSkipsWatchWithNoConnectedTelegram(): void
     {
         $user = $this->createMock(User::class);

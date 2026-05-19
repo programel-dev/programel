@@ -8,9 +8,12 @@ use App\DocumentCenter\Application\BroadcastSlotsAvailable\BroadcastSlotsAvailab
 use App\DocumentCenter\Application\PollDocumentCenter\PollDocumentCenterHandler;
 use App\DocumentCenter\Application\PollDocumentCenter\PollDocumentCenterMessage;
 use App\DocumentCenter\Domain\DocumentCenterRawHtml;
+use App\DocumentCenter\Domain\DocumentCenterSlot;
 use App\DocumentCenter\Domain\DocumentCenterSnapshot;
 use App\DocumentCenter\Infrastructure\Fetcher\DocumentCenterRawResponse;
+use App\Monitoring\Domain\MonitoringConfig;
 use App\Tests\Behat\Fake\FakeDocumentCenterFetcher;
+use App\Tests\Behat\Fake\FakeSlotScraper;
 use Behat\Behat\Context\Context;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
@@ -20,6 +23,7 @@ final class DocumentCenterContext implements Context
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly FakeDocumentCenterFetcher $fetcher,
+        private readonly FakeSlotScraper $slotScraper,
         private readonly PollDocumentCenterHandler $handler,
         private readonly InMemoryTransport $asyncTransport,
     ) {
@@ -32,11 +36,15 @@ final class DocumentCenterContext implements Context
     {
         $this->entityManager->createQuery('DELETE FROM '.DocumentCenterRawHtml::class)->execute();
         $this->entityManager->createQuery('DELETE FROM '.DocumentCenterSnapshot::class)->execute();
+        $this->entityManager->createQuery('DELETE FROM '.DocumentCenterSlot::class)->execute();
         $this->entityManager->createQuery('DELETE FROM App\Monitoring\Domain\MonitoringConfig m')->execute();
         $this->entityManager->clear();
         $this->asyncTransport->reset();
         $this->fetcher->setResponse(
             new DocumentCenterRawResponse(200, '<html><p>Запис доступний</p></html>', 'text/html', new \DateTimeImmutable())
+        );
+        $this->slotScraper->setResponse(
+            new DocumentCenterRawResponse(0, '', 'application/json', new \DateTimeImmutable())
         );
     }
 
@@ -95,6 +103,33 @@ final class DocumentCenterContext implements Context
     }
 
     /**
+     * @Given slot scraping is enabled
+     */
+    public function slotScrapingIsEnabled(): void
+    {
+        $config = $this->entityManager->getRepository(MonitoringConfig::class)->find(1) ?? new MonitoringConfig();
+        $config->setSlotScrapingEnabled(true, $this->getAdminUser());
+        $this->entityManager->persist($config);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+    }
+
+    /**
+     * @Given the slot scraper will return slots for date :date
+     */
+    public function theSlotScraperWillReturnSlotsForDate(string $date): void
+    {
+        $body = (string) json_encode([
+            'success' => true,
+            'date' => $date,
+            'dateFormatted' => $date,
+            'slots' => ['10:30 — 5 вільних слотів', '11:00 — 3 вільних слоти'],
+            'fetchedAt' => (new \DateTimeImmutable())->format(\DateTimeInterface::ATOM),
+        ]);
+        $this->slotScraper->setResponse(new DocumentCenterRawResponse(200, $body, 'application/json', new \DateTimeImmutable()));
+    }
+
+    /**
      * @When the poll document center handler runs
      */
     public function thePollDocumentCenterHandlerRuns(): void
@@ -122,6 +157,17 @@ final class DocumentCenterContext implements Context
         $actual = $this->entityManager->getRepository(DocumentCenterSnapshot::class)->count([]);
         if ($actual !== $count) {
             throw new \RuntimeException(sprintf('Expected %d row(s) in document_center.snapshot, got %d', $count, $actual));
+        }
+    }
+
+    /**
+     * @Then the slot table should have :count rows
+     */
+    public function theSlotTableShouldHaveRows(int $count): void
+    {
+        $actual = $this->entityManager->getRepository(DocumentCenterSlot::class)->count([]);
+        if ($actual !== $count) {
+            throw new \RuntimeException(sprintf('Expected %d row(s) in document_center.slot, got %d', $count, $actual));
         }
     }
 
@@ -207,5 +253,33 @@ final class DocumentCenterContext implements Context
                 throw new \RuntimeException('Expected no BroadcastSlotsAvailableMessage in async transport, but one was found');
             }
         }
+    }
+
+    /**
+     * @Then the broadcast message should carry slot data
+     */
+    public function theBroadcastMessageShouldCarrySlotData(): void
+    {
+        foreach ($this->asyncTransport->get() as $envelope) {
+            $msg = $envelope->getMessage();
+            if ($msg instanceof BroadcastSlotsAvailableMessage) {
+                if (null === $msg->date || [] === $msg->slots) {
+                    throw new \RuntimeException(sprintf('BroadcastSlotsAvailableMessage has no slot data: date=%s, slots=%s', var_export($msg->date, true), var_export($msg->slots, true)));
+                }
+
+                return;
+            }
+        }
+        throw new \RuntimeException('No BroadcastSlotsAvailableMessage found in async transport');
+    }
+
+    private function getAdminUser(): \App\User\Domain\User
+    {
+        $user = $this->entityManager->getRepository(\App\User\Domain\User::class)->findOneBy([]);
+        if (null === $user) {
+            throw new \RuntimeException('No user found in database for Behat admin operations');
+        }
+
+        return $user;
     }
 }

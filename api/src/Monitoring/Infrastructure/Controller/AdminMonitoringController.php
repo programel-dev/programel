@@ -30,6 +30,7 @@ final class AdminMonitoringController extends AbstractController
 
         return $this->json([
             'enabled' => $config?->isEnabled() ?? true,
+            'slotScrapingEnabled' => $config?->isSlotScrapingEnabled() ?? false,
             'updatedAt' => $config?->getUpdatedAt()?->format(\DateTimeInterface::ATOM),
             'updatedBy' => $config?->getUpdatedBy()?->getEmail(),
         ]);
@@ -40,20 +41,40 @@ final class AdminMonitoringController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
-        if (!is_array($data) || !array_key_exists('enabled', $data) || !is_bool($data['enabled'])) {
-            return $this->json(['error' => 'Field "enabled" (bool) is required.'], 400);
+        if (!is_array($data)) {
+            return $this->json(['error' => 'JSON body required.'], 400);
+        }
+
+        $hasEnabled = array_key_exists('enabled', $data);
+        $hasSlotScraping = array_key_exists('slotScrapingEnabled', $data);
+
+        if ($hasEnabled && !is_bool($data['enabled'])) {
+            return $this->json(['error' => 'Field "enabled" must be bool.'], 400);
+        }
+        if ($hasSlotScraping && !is_bool($data['slotScrapingEnabled'])) {
+            return $this->json(['error' => 'Field "slotScrapingEnabled" must be bool.'], 400);
+        }
+        if (!$hasEnabled && !$hasSlotScraping) {
+            return $this->json(['error' => 'Field "enabled" or "slotScrapingEnabled" is required.'], 400);
         }
 
         /** @var User $user */
         $user = $this->getUser();
         $config = $this->monitoringConfigRepository->getOrCreate();
-        $config->setEnabled($data['enabled'], $user);
+
+        if ($hasEnabled) {
+            $config->setEnabled($data['enabled'], $user);
+        }
+        if ($hasSlotScraping) {
+            $config->setSlotScrapingEnabled($data['slotScrapingEnabled'], $user);
+        }
 
         $this->entityManager->persist($config);
         $this->entityManager->flush();
 
         return $this->json([
             'enabled' => $config->isEnabled(),
+            'slotScrapingEnabled' => $config->isSlotScrapingEnabled(),
             'updatedAt' => $config->getUpdatedAt()->format(\DateTimeInterface::ATOM),
             'updatedBy' => $config->getUpdatedBy()?->getEmail(),
         ]);
