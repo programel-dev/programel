@@ -111,20 +111,20 @@ systemd timer → /home/serg/programel/scripts/deploy-home.sh:
 
 ## GHCR: яке середовище читає які images
 
-| Image | Droplet | Mac mini |
-|-------|---------|----------|
-| `api:latest` | ✓ CI pull в deploy job | ✓ Watchtower |
-| `frontend:latest` | ✓ CI pull в deploy job | — (не запускається) |
-| `playwright-equeue:latest` | — (не запускається) | ✓ Watchtower |
+| Image                      | Droplet                | Mac mini            |
+|----------------------------|------------------------|---------------------|
+| `api:latest`               | ✓ CI pull в deploy job | ✓ Watchtower        |
+| `frontend:latest`          | ✓ CI pull в deploy job | — (не запускається) |
+| `playwright-equeue:latest` | — (не запускається)    | ✓ Watchtower        |
 
 ## Compose-файли
 
-| Файл | Де живе | Як потрапляє на сервер |
-|------|---------|------------------------|
-| `docker-compose.dev.yml` | git репо | Тільки локально (dev machine) |
-| `docker-compose.prod.yml` | git репо | CI scp → `/var/www/programel/` |
-| `docker-compose.home.yml` | git репо | systemd timer → `git pull` → `/home/serg/programel/` |
-| `docker-compose.override.yml` | НЕ у git (gitignore) | Тільки локально (dev debugging) |
+| Файл                          | Де живе              | Як потрапляє на сервер                               |
+|-------------------------------|----------------------|------------------------------------------------------|
+| `docker-compose.dev.yml`      | git репо             | Тільки локально (dev machine)                        |
+| `docker-compose.prod.yml`     | git репо             | CI scp → `/var/www/programel/`                       |
+| `docker-compose.home.yml`     | git репо             | systemd timer → `git pull` → `/home/serg/programel/` |
+| `docker-compose.override.yml` | НЕ у git (gitignore) | Тільки локально (dev debugging)                      |
 
 ## Схема портів і мережі (Mac mini)
 

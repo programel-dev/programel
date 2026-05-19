@@ -331,4 +331,4 @@ docker logs --tail 20 programel-worker-1 | grep -E "(equeue|playwright|Consuming
 - [ ] `curl http://localhost:3001/health` → `{"status":"ok"}`
 - [ ] `systemd timer programel-deploy` active
 - [ ] `systemd service programel-tunnel` active (якщо потрібен)
-- [ ] Перший реальний poll через ~5 хв: `equeue_snapshot` таблиця має новий рядок
+- [ ] Перший реальний poll через ~5 хв: `document_center.snapshot` таблиця має новий рядок

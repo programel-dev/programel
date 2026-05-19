@@ -157,9 +157,9 @@ ssh serg@192.168.2.140 'docker exec programel-watchtower-1 /watchtower --run-onc
 
 ## Що НЕ автоматизовано (і чому)
 
-| Дія | Чому не автоматизована | Як робити |
-|-----|------------------------|-----------|
-| Оновлення `.env` (секрети) | Секрети не зберігаються у git за дизайном | Вручну `nano /home/serg/programel/.env` + `docker compose up -d --force-recreate <service>` |
-| SSH тунель (autossh) якщо впав | autossh systemd service повинен рестартити сам (`Restart=always`) | `sudo systemctl restart programel-tunnel.service` |
-| Перший bootstrap нової машини | One-time setup, описаний у [02-ubuntu-bootstrap.md](02-ubuntu-bootstrap.md) | По чеклісту |
-| Оновлення самого Watchtower | containrrr/watchtower image не оновлюється сам собою за замовчуванням | `docker compose pull watchtower && docker compose up -d watchtower` |
+| Дія                            | Чому не автоматизована                                                      | Як робити                                                                                   |
+|--------------------------------|-----------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
+| Оновлення `.env` (секрети)     | Секрети не зберігаються у git за дизайном                                   | Вручну `nano /home/serg/programel/.env` + `docker compose up -d --force-recreate <service>` |
+| SSH тунель (autossh) якщо впав | autossh systemd service повинен рестартити сам (`Restart=always`)           | `sudo systemctl restart programel-tunnel.service`                                           |
+| Перший bootstrap нової машини  | One-time setup, описаний у [02-ubuntu-bootstrap.md](02-ubuntu-bootstrap.md) | По чеклісту                                                                                 |
+| Оновлення самого Watchtower    | containrrr/watchtower image не оновлюється сам собою за замовчуванням       | `docker compose pull watchtower && docker compose up -d watchtower`                         |

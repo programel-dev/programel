@@ -100,22 +100,22 @@ ss -tlnp | grep -E "5432|6379"
 
 ```bash
 # Останні 5 snapshot записів
-ssh droplet-programel 'docker exec programel-postgres-1 psql -U programel -d programel -c "
+ssh deploy@46.225.232.182 'docker exec programel-postgres-1 psql -U programel -d programel -c "
 SELECT
     fetched_at,
     status,
     http_status,
     parser_version,
     payload->'"'"'slots'"'"' AS slots
-FROM equeue_snapshot
+FROM document_center.snapshot
 ORDER BY fetched_at DESC
 LIMIT 5;
 "'
 
 # Перевірити що поллінг живий (рядки за останні 10 хв)
-ssh droplet-programel 'docker exec programel-postgres-1 psql -U programel -d programel -c "
+ssh deploy@46.225.232.182 'docker exec programel-postgres-1 psql -U programel -d programel -c "
 SELECT COUNT(*), MAX(fetched_at)
-FROM equeue_snapshot
+FROM document_center.snapshot
 WHERE fetched_at > NOW() - INTERVAL '"'"'10 minutes'"'"';
 "'
 # Очікуємо: count >= 1, max свіже
