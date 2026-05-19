@@ -6,3 +6,8 @@ services:
 
     App\Tests\Behat\:
         resource: '../tests/Behat/*'
+
+    App\Tests\Behat\Fake\:
+        resource: '../tests/Behat/Fake/*'
+
+    App\DocumentCenter\Infrastructure\Fetcher\DocumentCenterFetcherInterface: '@App\Tests\Behat\Fake\FakeDocumentCenterFetcher'

@@ -7,6 +7,7 @@ namespace App\Tests\Equeue;
 use App\DocumentCenter\Application\PollDocumentCenter\PollDocumentCenterHandler;
 use App\DocumentCenter\Application\PollDocumentCenter\PollDocumentCenterMessage;
 use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterRawHtmlRepository;
+use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterSlotRepository;
 use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterSnapshotRepository;
 use App\DocumentCenter\Infrastructure\Doctrine\DocumentCenterWatchRepository;
 use App\DocumentCenter\Infrastructure\Fetcher\DocumentCenterFetcherInterface;
@@ -33,6 +34,7 @@ final class PollEqueueHandlerDisabledTest extends TestCase
         $handler = new PollDocumentCenterHandler(
             fetcher: $fetcher,
             rawHtmlRepository: $this->createMock(DocumentCenterRawHtmlRepository::class),
+            slotRepository: $this->createMock(DocumentCenterSlotRepository::class),
             entityManager: $this->createMock(EntityManagerInterface::class),
             messageBus: $this->createMock(MessageBusInterface::class),
             lockFactory: $lockFactory,
