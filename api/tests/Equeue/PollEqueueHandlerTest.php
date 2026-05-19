@@ -202,7 +202,7 @@ final class PollEqueueHandlerTest extends TestCase
 
     // --- Playwright JSON mode ---
 
-    public function testPlaywrightPersistsSlotNotRawHtml(): void
+    public function testPlaywrightPersistsBothSlotAndRawHtml(): void
     {
         $slots = [
             ['date' => '2026-05-25', 'times' => ['09:00', '10:30']],
@@ -220,7 +220,7 @@ final class PollEqueueHandlerTest extends TestCase
             });
 
         $rawHtmlRepo = $this->createMock(DocumentCenterRawHtmlRepository::class);
-        $rawHtmlRepo->expects(self::never())->method('deleteOlderThan');
+        $rawHtmlRepo->expects(self::once())->method('deleteOlderThan');
 
         [$persisted] = $this->invoke(
             response: $response,
@@ -234,7 +234,10 @@ final class PollEqueueHandlerTest extends TestCase
         self::assertSame($slots, $slotEntities[0]->getSlots());
         self::assertSame($fetchedAt, $slotEntities[0]->getFetchedAt());
 
-        self::assertCount(0, array_filter($persisted, fn ($e) => $e instanceof DocumentCenterRawHtml));
+        $rawHtmlEntities = array_values(array_filter($persisted, fn ($e) => $e instanceof DocumentCenterRawHtml));
+        self::assertCount(1, $rawHtmlEntities);
+        self::assertFalse($rawHtmlEntities[0]->isAlertPresent());
+        self::assertSame($body, $rawHtmlEntities[0]->getHtmlBody());
 
         $before = new \DateTimeImmutable('-8 hours');
         self::assertGreaterThanOrEqual($before->getTimestamp(), $slotCutoffs[0]->getTimestamp());
