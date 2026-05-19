@@ -1,5 +1,16 @@
 # Git Conventions
 
+## ⛔ Never work directly on main
+
+**NEVER** make commits directly to `main`. Always create a feature branch first:
+
+```
+git checkout main && git pull
+git checkout -b <type>/<description>
+```
+
+All work goes on a branch → PR → merge. No exceptions.
+
 ## ⛔ Strictly forbidden without explicit permission
 
 **NEVER** run `git commit`, `git push`, `gh pr create`, or `gh pr merge` without an explicit instruction from the user.
