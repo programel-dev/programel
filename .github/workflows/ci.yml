@@ -117,6 +117,7 @@ jobs:
           echo "SENTRY_DSN=" >> .env
           echo "LOCK_DSN=flock" >> .env
           echo "REDIS_URL=redis://127.0.0.1:6379" >> .env.test
+          echo "LOCK_DSN=flock" >> .env.test
 
       - name: Install API dependencies
         working-directory: api
