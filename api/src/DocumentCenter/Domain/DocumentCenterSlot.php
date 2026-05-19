@@ -42,7 +42,7 @@ class DocumentCenterSlot
         return $this->fetchedAt;
     }
 
-    /** @return list<array{date: string, times: list<string>}> */
+    /** @return array{date: string, slots: list<string>} */
     public function getSlots(): array
     {
         return $this->slots;

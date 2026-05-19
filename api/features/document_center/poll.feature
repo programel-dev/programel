@@ -45,3 +45,20 @@ Feature: PollDocumentCenter handler stores HTML and notifies on state transition
     And the fetcher will return an HTML response without alert
     When the poll document center handler runs
     Then the raw html table should have 1 rows
+
+  Scenario: Slot scraping enabled persists slot row and broadcast carries slot data
+    Given slot scraping is enabled
+    And the previous snapshot had alertPresent "true"
+    And the fetcher will return an HTML response without alert
+    And the slot scraper will return slots for date "20.05.2026"
+    When the poll document center handler runs
+    Then the slot table should have 1 rows
+    And a broadcast slots available message should be dispatched
+    And the broadcast message should carry slot data
+
+  Scenario: Slot scraping disabled does not call Playwright and broadcast has no slot data
+    Given the previous snapshot had alertPresent "true"
+    And the fetcher will return an HTML response without alert
+    When the poll document center handler runs
+    Then the slot table should have 0 rows
+    And a broadcast slots available message should be dispatched

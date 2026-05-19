@@ -12,6 +12,11 @@ services:
 
     App\DocumentCenter\Infrastructure\Fetcher\DocumentCenterFetcherInterface: '@App\Tests\Behat\Fake\FakeDocumentCenterFetcher'
 
+    App\DocumentCenter\Application\PollDocumentCenter\PollDocumentCenterHandler:
+        arguments:
+            $fetcher: '@App\Tests\Behat\Fake\FakeDocumentCenterFetcher'
+            $slotScraper: '@App\Tests\Behat\Fake\FakeSlotScraper'
+
     Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport:
         alias: messenger.transport.async
         public: true

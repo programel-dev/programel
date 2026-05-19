@@ -33,3 +33,8 @@ services:
             $playwrightUrl: '%env(PLAYWRIGHT_EQUEUE_URL)%'
 
     App\DocumentCenter\Infrastructure\Fetcher\DocumentCenterFetcherInterface: '@App\DocumentCenter\Infrastructure\Fetcher\FlareSolverrDocumentCenterFetcher'
+
+    App\DocumentCenter\Application\PollDocumentCenter\PollDocumentCenterHandler:
+        arguments:
+            $fetcher: '@App\DocumentCenter\Infrastructure\Fetcher\FlareSolverrDocumentCenterFetcher'
+            $slotScraper: '@App\DocumentCenter\Infrastructure\Fetcher\PlaywrightDocumentCenterFetcher'

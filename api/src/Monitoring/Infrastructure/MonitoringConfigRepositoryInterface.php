@@ -10,6 +10,8 @@ interface MonitoringConfigRepositoryInterface
 {
     public function isEnabled(): bool;
 
+    public function isSlotScrapingEnabled(): bool;
+
     public function getConfig(): ?MonitoringConfig;
 
     public function getOrCreate(): MonitoringConfig;
