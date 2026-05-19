@@ -9,8 +9,8 @@ use App\DocumentCenter\Application\PollDocumentCenter\PollDocumentCenterMessage;
 use App\DocumentCenter\Domain\DocumentCenterRawHtml;
 use App\DocumentCenter\Domain\DocumentCenterSlot;
 use App\DocumentCenter\Domain\DocumentCenterSnapshot;
-use App\Tests\Behat\Fake\FakeDocumentCenterFetcher;
 use App\DocumentCenter\Infrastructure\Fetcher\DocumentCenterRawResponse;
+use App\Tests\Behat\Fake\FakeDocumentCenterFetcher;
 use Behat\Behat\Context\Context;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -194,11 +194,7 @@ final class DocumentCenterContext implements Context
         $expected = 'true' === $value;
         $actual = $snapshot->getPayload()['alertPresent'] ?? null;
         if ($actual !== $expected) {
-            throw new \RuntimeException(sprintf(
-                'Expected snapshot payload alertPresent to be %s, got %s',
-                var_export($expected, true),
-                var_export($actual, true)
-            ));
+            throw new \RuntimeException(sprintf('Expected snapshot payload alertPresent to be %s, got %s', var_export($expected, true), var_export($actual, true)));
         }
     }
 
@@ -213,11 +209,7 @@ final class DocumentCenterContext implements Context
         }
         $expected = 'true' === $value;
         if ($rawHtml->isAlertPresent() !== $expected) {
-            throw new \RuntimeException(sprintf(
-                'Expected raw_html alertPresent to be %s, got %s',
-                var_export($expected, true),
-                var_export($rawHtml->isAlertPresent(), true)
-            ));
+            throw new \RuntimeException(sprintf('Expected raw_html alertPresent to be %s, got %s', var_export($expected, true), var_export($rawHtml->isAlertPresent(), true)));
         }
     }
 }
