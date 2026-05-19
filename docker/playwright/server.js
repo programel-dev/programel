@@ -6,6 +6,7 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 chromium.use(StealthPlugin());
 
 const app = express();
+app.use((req, _res, next) => { console.log(`${new Date().toISOString()} ${req.method} ${req.path}`); next(); });
 const PORT = 3001;
 const TARGET_URL = 'https://munich.pasport.org.ua/solutions/e-queue';
 const PAGE_TIMEOUT_MS = 30_000;
