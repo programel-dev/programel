@@ -32,4 +32,4 @@ services:
         arguments:
             $playwrightUrl: '%env(PLAYWRIGHT_EQUEUE_URL)%'
 
-    App\DocumentCenter\Infrastructure\Fetcher\DocumentCenterFetcherInterface: '@App\DocumentCenter\Infrastructure\Fetcher\PlaywrightDocumentCenterFetcher'
+    App\DocumentCenter\Infrastructure\Fetcher\DocumentCenterFetcherInterface: '@App\DocumentCenter\Infrastructure\Fetcher\FlareSolverrDocumentCenterFetcher'

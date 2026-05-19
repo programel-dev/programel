@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Behat;
 
+use App\DocumentCenter\Application\BroadcastSlotsAvailable\BroadcastSlotsAvailableMessage;
 use App\DocumentCenter\Application\PollDocumentCenter\PollDocumentCenterHandler;
 use App\DocumentCenter\Application\PollDocumentCenter\PollDocumentCenterMessage;
 use App\DocumentCenter\Domain\DocumentCenterRawHtml;
-use App\DocumentCenter\Domain\DocumentCenterSlot;
 use App\DocumentCenter\Domain\DocumentCenterSnapshot;
 use App\DocumentCenter\Infrastructure\Fetcher\DocumentCenterRawResponse;
 use App\Tests\Behat\Fake\FakeDocumentCenterFetcher;
 use Behat\Behat\Context\Context;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 
 final class DocumentCenterContext implements Context
 {
@@ -20,6 +21,7 @@ final class DocumentCenterContext implements Context
         private readonly EntityManagerInterface $entityManager,
         private readonly FakeDocumentCenterFetcher $fetcher,
         private readonly PollDocumentCenterHandler $handler,
+        private readonly InMemoryTransport $asyncTransport,
     ) {
     }
 
@@ -28,27 +30,14 @@ final class DocumentCenterContext implements Context
      */
     public function resetState(): void
     {
-        $this->entityManager->createQuery('DELETE FROM '.DocumentCenterSlot::class)->execute();
         $this->entityManager->createQuery('DELETE FROM '.DocumentCenterRawHtml::class)->execute();
         $this->entityManager->createQuery('DELETE FROM '.DocumentCenterSnapshot::class)->execute();
         $this->entityManager->createQuery('DELETE FROM App\Monitoring\Domain\MonitoringConfig m')->execute();
         $this->entityManager->clear();
+        $this->asyncTransport->reset();
         $this->fetcher->setResponse(
-            new DocumentCenterRawResponse(200, '{}', 'application/json', new \DateTimeImmutable())
+            new DocumentCenterRawResponse(200, '<html><p>Запис доступний</p></html>', 'text/html', new \DateTimeImmutable())
         );
-    }
-
-    /**
-     * @Given the fetcher will return a Playwright JSON response with :count slots
-     */
-    public function theFetcherWillReturnPlaywrightResponse(int $count): void
-    {
-        $slots = [];
-        for ($i = 0; $i < $count; ++$i) {
-            $slots[] = ['date' => sprintf('2026-05-%02d', 25 + $i), 'times' => ['09:00', '10:30']];
-        }
-        $body = (string) json_encode(['success' => true, 'slots' => $slots]);
-        $this->fetcher->setResponse(new DocumentCenterRawResponse(200, $body, 'application/json', new \DateTimeImmutable()));
     }
 
     /**
@@ -78,11 +67,19 @@ final class DocumentCenterContext implements Context
     }
 
     /**
-     * @Given there is a slot row older than 8 hours
+     * @Given the previous snapshot had alertPresent :value
      */
-    public function thereIsAnOldSlotRow(): void
+    public function thePreviousSnapshotHadAlertPresent(string $value): void
     {
-        $this->entityManager->persist(new DocumentCenterSlot(new \DateTimeImmutable('-9 hours'), []));
+        $alertPresent = 'true' === $value;
+        $this->entityManager->persist(new DocumentCenterSnapshot(
+            new \DateTimeImmutable('-5 minutes'),
+            DocumentCenterSnapshot::STATUS_OK,
+            200,
+            ['alertPresent' => $alertPresent, 'slots' => []],
+            0,
+            'cloudflare-bypass-v1',
+        ));
         $this->entityManager->flush();
         $this->entityManager->clear();
     }
@@ -104,17 +101,6 @@ final class DocumentCenterContext implements Context
     {
         ($this->handler)(new PollDocumentCenterMessage());
         $this->entityManager->clear();
-    }
-
-    /**
-     * @Then the slot table should have :count rows
-     */
-    public function theSlotTableShouldHaveRows(int $count): void
-    {
-        $actual = $this->entityManager->getRepository(DocumentCenterSlot::class)->count([]);
-        if ($actual !== $count) {
-            throw new \RuntimeException(sprintf('Expected %d row(s) in document_center.slot, got %d', $count, $actual));
-        }
     }
 
     /**
@@ -140,26 +126,11 @@ final class DocumentCenterContext implements Context
     }
 
     /**
-     * @Then the slot row should have :count slots
-     */
-    public function theSlotRowShouldHaveSlots(int $count): void
-    {
-        $slot = $this->entityManager->getRepository(DocumentCenterSlot::class)->findOneBy([]);
-        if (null === $slot) {
-            throw new \RuntimeException('No row found in document_center.slot');
-        }
-        $actual = count($slot->getSlots());
-        if ($actual !== $count) {
-            throw new \RuntimeException(sprintf('Expected %d slot(s) in slot row, got %d', $count, $actual));
-        }
-    }
-
-    /**
      * @Then the snapshot parser version should be :version
      */
     public function theSnapshotParserVersionShouldBe(string $version): void
     {
-        $snapshot = $this->entityManager->getRepository(DocumentCenterSnapshot::class)->findOneBy([]);
+        $snapshot = $this->entityManager->getRepository(DocumentCenterSnapshot::class)->findOneBy([], ['id' => 'DESC']);
         if (null === $snapshot) {
             throw new \RuntimeException('No row found in document_center.snapshot');
         }
@@ -187,7 +158,7 @@ final class DocumentCenterContext implements Context
      */
     public function theSnapshotPayloadAlertPresentShouldBe(string $value): void
     {
-        $snapshot = $this->entityManager->getRepository(DocumentCenterSnapshot::class)->findOneBy([]);
+        $snapshot = $this->entityManager->getRepository(DocumentCenterSnapshot::class)->findOneBy([], ['id' => 'DESC']);
         if (null === $snapshot) {
             throw new \RuntimeException('No row found in document_center.snapshot');
         }
@@ -210,6 +181,31 @@ final class DocumentCenterContext implements Context
         $expected = 'true' === $value;
         if ($rawHtml->isAlertPresent() !== $expected) {
             throw new \RuntimeException(sprintf('Expected raw_html alertPresent to be %s, got %s', var_export($expected, true), var_export($rawHtml->isAlertPresent(), true)));
+        }
+    }
+
+    /**
+     * @Then a broadcast slots available message should be dispatched
+     */
+    public function aBroadcastSlotsAvailableMessageShouldBeDispatched(): void
+    {
+        foreach ($this->asyncTransport->get() as $envelope) {
+            if ($envelope->getMessage() instanceof BroadcastSlotsAvailableMessage) {
+                return;
+            }
+        }
+        throw new \RuntimeException('Expected BroadcastSlotsAvailableMessage in async transport, but none found');
+    }
+
+    /**
+     * @Then no broadcast slots available message should be dispatched
+     */
+    public function noBroadcastSlotsAvailableMessageShouldBeDispatched(): void
+    {
+        foreach ($this->asyncTransport->get() as $envelope) {
+            if ($envelope->getMessage() instanceof BroadcastSlotsAvailableMessage) {
+                throw new \RuntimeException('Expected no BroadcastSlotsAvailableMessage in async transport, but one was found');
+            }
         }
     }
 }

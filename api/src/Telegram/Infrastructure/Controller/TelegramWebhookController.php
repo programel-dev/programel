@@ -67,7 +67,7 @@ final class TelegramWebhookController extends AbstractController
         $parts = preg_split('/\s+/', $text, 2);
         $token = isset($parts[1]) ? trim($parts[1]) : '';
         if ('' === $token) {
-            $this->replySafely($chatId, '👋 Привіт! Щоб приєднати акаунт, відкрий посилання з сайту programel.');
+            $this->replySafely($chatId, '👋 Привіт! Щоб приєднати акаунт, відкрий посилання з сайту programel.com');
 
             return new JsonResponse(['ok' => true]);
         }
